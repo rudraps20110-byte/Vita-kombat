@@ -42,7 +42,7 @@ public:
     void drawStageSelect(const UiState& ui);
     void drawVsSplash(const UiState& ui);
     void drawMatch(const MatchState& m, int globalFrame);
-    void drawPauseOverlay(const UiState& ui);
+    void drawPauseOverlay(const UiState& ui, bool bgmMuted, bool sfxMuted);
     void drawMoveListOverlay(const MatchState& m);
     void drawMatchOverScreen(const MatchState& m, const UiState& ui);
     void drawArcadeVictoryScreen(const UiState& ui);

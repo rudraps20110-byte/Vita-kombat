@@ -33,6 +33,13 @@ struct MatchState {
     int screenShakeFrames = 0;
     float screenShakeMag = 0.0f;
     int superFlashFrames = 0;
+    int xrayFlashFrames = 0;
+    int xrayTargetSlot = -1;
+    int finisherSequenceFrames = 0;
+    int finisherWinnerSlot = -1;
+    int finisherCharId = -1;
+    float finisherTargetX = 0.0f;
+    float finisherTargetY = GROUND_Y;
     int trainingRegenTimer = 0;
     bool firstHitAwarded = false;
 

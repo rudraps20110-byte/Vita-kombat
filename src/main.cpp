@@ -109,6 +109,7 @@ int main() {
 
     AudioEngine audio;
     audio.init();
+    audio.setBgm(BgmTrack::MENU);
 
     GameScreen screen = GameScreen::TITLE;
     UiState ui;
@@ -129,6 +130,21 @@ int main() {
     while (true) {
         InputState in = readVitaInput(prevButtons, prevUp, prevDown, prevLeft, prevRight);
         ui.frameCount++;
+
+        if (screen == GameScreen::STORY_SCENE) {
+            audio.setBgm(BgmTrack::STORY);
+        } else if (screen == GameScreen::FIGHT) {
+            bool isBoss = (match.fighters[1].charId == 9 ||
+                           (match.mode == GameMode::ARCADE && ui.arcadeStageIndex == CHARACTER_COUNT - 1));
+            audio.setBgm(isBoss ? BgmTrack::BOSS : BgmTrack::BATTLE);
+        } else if (screen == GameScreen::VS_SPLASH) {
+            int oppChar = (ui.modeSelection == 0) ? ui.arcadeOpponents[ui.arcadeStageIndex] : ui.p2Select;
+            bool isBoss = (oppChar == 9 ||
+                           (ui.modeSelection == 0 && ui.arcadeStageIndex == CHARACTER_COUNT - 1));
+            audio.setBgm(isBoss ? BgmTrack::BOSS : BgmTrack::BATTLE);
+        } else if (screen != GameScreen::PAUSE && screen != GameScreen::MOVE_LIST) {
+            audio.setBgm(BgmTrack::MENU);
+        }
 
         switch (screen) {
             case GameScreen::TITLE:
@@ -395,10 +411,10 @@ int main() {
 
             case GameScreen::PAUSE:
                 if (in.upPressed) {
-                    ui.pauseSelection = (ui.pauseSelection + 3) % 4;
+                    ui.pauseSelection = (ui.pauseSelection + 5) % 6;
                     audio.play(SoundId::MENU_MOVE);
                 } else if (in.downPressed) {
-                    ui.pauseSelection = (ui.pauseSelection + 1) % 4;
+                    ui.pauseSelection = (ui.pauseSelection + 1) % 6;
                     audio.play(SoundId::MENU_MOVE);
                 } else if (in.startPressed || in.circlePressed) {
                     audio.play(SoundId::MENU_MOVE);
@@ -410,6 +426,10 @@ int main() {
                     } else if (ui.pauseSelection == 1) {
                         screen = GameScreen::MOVE_LIST;
                     } else if (ui.pauseSelection == 2) {
+                        audio.setBgmMuted(!audio.isBgmMuted());
+                    } else if (ui.pauseSelection == 3) {
+                        audio.setSfxMuted(!audio.isSfxMuted());
+                    } else if (ui.pauseSelection == 4) {
                         if (match.mode == GameMode::STORY) {
                             const StoryChapter& sc = getStoryChapter(storyProg.activeChapter);
                             if (storyProg.activeBeat < sc.beatCount) {
@@ -425,7 +445,7 @@ int main() {
                 }
                 renderer.beginFrame();
                 renderer.drawMatch(match, ui.frameCount);
-                renderer.drawPauseOverlay(ui);
+                renderer.drawPauseOverlay(ui, audio.isBgmMuted(), audio.isSfxMuted());
                 renderer.endFrame();
                 break;
 

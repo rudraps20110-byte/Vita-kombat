@@ -471,8 +471,27 @@ void applyHitToDefender(MatchState& m, Fighter& attacker, Fighter& defender,
 
     bool heavy = (rawDamage >= 90 || launchY <= -12.0f || isSpecialOrSuper);
     m.hitstopFrames = heavy ? 6 : 3;
+    if (attacker.currentMove.kind == MoveKind::SUPER_ART) {
+        m.xrayFlashFrames = 20;
+        m.xrayTargetSlot = defender.slot;
+        m.calloutText = "X-RAY IMPACT!";
+        m.calloutTimer = 65;
+        m.hitstopFrames = 10;
+        spawnShockwave(m, defender.x, defender.y - 78.0f, 120.0f, rgba(135, 240, 255));
+    }
+    if (isFinishTarget && attacker.currentMove.kind == MoveKind::FINISHER) {
+        m.finisherSequenceFrames = 145;
+        m.finisherWinnerSlot = attacker.slot;
+        m.finisherCharId = attacker.charId;
+        m.finisherTargetX = defender.x;
+        m.finisherTargetY = GROUND_Y;
+        m.screenShakeFrames = 45;
+        m.screenShakeMag = 9.0f;
+        m.hitstopFrames = 8;
+        spawnShockwave(m, defender.x, defender.y - 78.0f, 130.0f, attCh.accentColor);
+    }
     if (heavy) {
-        m.screenShakeFrames = 10;
+        m.screenShakeFrames = std::max(m.screenShakeFrames, 10);
         m.screenShakeMag = (launchY <= -13.0f) ? 8.5f : 5.0f;
         audio.play(SoundId::HIT_HEAVY);
         spawnShockwave(m, defender.x, defender.y - 78.0f, (launchY <= -13.0f) ? 88.0f : 62.0f, attCh.accentColor);
@@ -1083,6 +1102,11 @@ void startRound(MatchState& m) {
     m.firstHitAwarded = false;
     m.hitstopFrames = 0;
     m.superFlashFrames = 0;
+    m.xrayFlashFrames = 0;
+    m.xrayTargetSlot = 1;
+    m.finisherSequenceFrames = 0;
+    m.finisherWinnerSlot = 0;
+    m.finisherCharId = 0;
     m.screenShakeFrames = 0;
 
     if (m.mode == GameMode::TRAINING) {
@@ -1101,6 +1125,20 @@ void updateMatch(MatchState& m, const InputState& p1Input, AudioEngine& audio) {
     if (m.calloutTimer > 0) m.calloutTimer--;
     if (m.screenShakeFrames > 0) m.screenShakeFrames--;
     if (m.superFlashFrames > 0) m.superFlashFrames--;
+    if (m.xrayFlashFrames > 0) m.xrayFlashFrames--;
+
+    if (m.finisherSequenceFrames > 0) {
+        m.finisherSequenceFrames--;
+        const CharacterDef& fCh = getCharacter(m.finisherCharId);
+        if (m.finisherSequenceFrames == 110 || m.finisherSequenceFrames == 70 || m.finisherSequenceFrames == 35) {
+            m.screenShakeFrames = 16;
+            m.screenShakeMag = 8.0f;
+            spawnShockwave(m, m.finisherTargetX, m.finisherTargetY - 78.0f, 135.0f, fCh.accentColor);
+            spawnParticles(m, m.finisherTargetX, m.finisherTargetY - 78.0f, 26, fCh.auraColor, 7.5f, true);
+            spawnParticles(m, m.finisherTargetX, m.finisherTargetY - 78.0f, 18, rgba(220, 20, 35), 6.5f, true);
+            audio.play((m.finisherSequenceFrames == 70) ? SoundId::KO_BOOM : SoundId::HIT_HEAVY);
+        }
+    }
 
     // Particles always animate smoothly
     for (auto& pt : m.particles) {
@@ -1283,7 +1321,7 @@ void updateMatch(MatchState& m, const InputState& p1Input, AudioEngine& audio) {
             int winSlot = 1 - dizzySlot;
             m.finishHimTimer--;
 
-            if (m.fighters[dizzySlot].hp <= 0 || m.finishHimTimer <= 0) {
+            if (m.finisherSequenceFrames <= 0 && (m.fighters[dizzySlot].hp <= 0 || m.finishHimTimer <= 0)) {
                 m.finishHimActive = false;
                 m.roundOver = true;
                 m.fighters[dizzySlot].hp = 0;
@@ -1295,7 +1333,7 @@ void updateMatch(MatchState& m, const InputState& p1Input, AudioEngine& audio) {
                 }
                 m.fighters[winSlot].state = FighterState::VICTORY;
                 m.fighters[winSlot].roundsWon++;
-                m.postRoundTimer = 150;
+                m.postRoundTimer = m.finisherExecuted ? 95 : 150;
                 m.winnerSlot = winSlot;
                 audio.play(SoundId::KO_BOOM);
             }

@@ -1,6 +1,6 @@
 # Vita Kombat: Realm of Twelve Warriors (PS Vita `.vpk`)
 
-A Mortal Kombat-inspired 2D fighting game built specifically for PlayStation Vita (`960x544`, `vita2d`, `SceCtrl`, `SceAudio`), featuring a **12-Chapter Illustrated Story Mode (~1 hour)** covering every warrior's origin & how they gained or inherited their powers, **12 unique playable characters**, **2 signature special abilities, a Super Art, and a Finisher each**, organic 14-joint interpolated animations, chain combos, air juggles, **7 arenas**, **5 difficulty levels (Beginner → Legendary)**, Arcade Tower, VS CPU, and Training Dojo.
+A Mortal Kombat-inspired 2D fighting game built specifically for PlayStation Vita (`960x544`, `vita2d`, `SceCtrl`, `SceAudio`), featuring a **12-Chapter Manga Storybook Mode (~1 hour)** covering every warrior's origin, **12 unique playable characters** with **12 custom visual Finisher cinematics**, **X-Ray Super Art impact flashes**, **4-track procedural chiptune/arcade BGM** (`MENU`, `STORY`, `BATTLE`, `BOSS`) with Pause-menu Music/SFX toggles, organic 14-joint interpolated animations, chain combos, air juggles, **7 arenas**, **5 difficulty levels (Beginner → Legendary)**, Arcade Tower, VS CPU, and Training Dojo.
 
 ---
 

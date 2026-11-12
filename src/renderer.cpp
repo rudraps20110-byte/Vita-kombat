@@ -924,7 +924,7 @@ void Renderer::drawMatch(const MatchState& m, int globalFrame) {
         shakeY = std::cos(globalFrame * 2.7f) * m.screenShakeMag * 0.6f;
     }
 
-    drawStageBackdrop(m.stageId, globalFrame, m.superFlashFrames > 0 || m.finishHimActive);
+    drawStageBackdrop(m.stageId, globalFrame, m.superFlashFrames > 0 || m.xrayFlashFrames > 0 || m.finishHimActive || m.finisherSequenceFrames > 0);
 
     // Acid pools on floor
     for (const auto& pool : m.acidPools) {
@@ -988,8 +988,126 @@ void Renderer::drawMatch(const MatchState& m, int globalFrame) {
         vita2d_draw_fill_circle(pt.x + shakeX, pt.y + shakeY, pt.size, withAlpha(pt.color, a));
     }
 
+    // X-Ray Super Impact Silhouette Flash!
+    if (m.xrayFlashFrames > 0 && m.xrayTargetSlot >= 0 && m.xrayTargetSlot <= 1) {
+        const Fighter& xf = m.fighters[m.xrayTargetSlot];
+        float xx = xf.x + shakeX;
+        float xy = xf.y - 78.0f + shakeY;
+        if (m.xrayFlashFrames % 3 == 0) {
+            vita2d_draw_rectangle(0, 0, SCREEN_W, SCREEN_H, rgba(160, 240, 255, 65));
+        }
+        vita2d_draw_fill_circle(xx, xy, 44.0f, rgba(90, 235, 255, 110));
+        // Stylized X-Ray rib & spine impact flash
+        vita2d_draw_line(xx, xy - 30.0f, xx, xy + 24.0f, rgba(220, 252, 255, 235));
+        for (int rib = -2; rib <= 2; ++rib) {
+            vita2d_draw_line(xx - 16.0f, xy + rib * 8.0f, xx + 16.0f, xy + rib * 8.0f, rgba(220, 252, 255, 220));
+        }
+        vita2d_draw_fill_circle(xx, xy - 44.0f, 12.0f, rgba(225, 255, 255, 210));
+    }
+
+    // 12 Unique Character Finisher Cinematics!
+    if (m.finisherSequenceFrames > 0) {
+        float fx = m.finisherTargetX + shakeX;
+        float fy = m.finisherTargetY + shakeY;
+        int fProg = 145 - m.finisherSequenceFrames; // 0..145
+        float pulse = 0.85f + 0.15f * std::sin(globalFrame * 0.4f);
+
+        switch (m.finisherCharId) {
+            case 0: // AGNI: Inferno Incineration (Towering Hellfire Pillar)
+                vita2d_draw_rectangle(fx - 46.0f, 0.0f, 92.0f, fy, rgba(255, 85, 10, 175));
+                vita2d_draw_rectangle(fx - 22.0f, 0.0f, 44.0f, fy, rgba(255, 215, 65, 225));
+                break;
+            case 1: // HIMRAJ: Frozen Oblivion (Ice Monolith -> Shatter)
+                if (fProg < 75) {
+                    vita2d_draw_rectangle(fx - 44.0f, fy - 165.0f, 88.0f, 168.0f, rgba(95, 230, 255, 165));
+                    drawRectOutline(fx - 44.0f, fy - 165.0f, 88.0f, 168.0f, 3.0f, rgba(225, 252, 255));
+                } else {
+                    for (int s = 0; s < 12; ++s) {
+                        float ang = (s * 6.28318f) / 12.0f;
+                        float dist = (fProg - 75) * 4.5f;
+                        vita2d_draw_fill_circle(fx + std::cos(ang) * dist, fy - 80.0f + std::sin(ang) * dist, 7.0f, rgba(165, 245, 255, 220));
+                    }
+                }
+                break;
+            case 2: // VAJRA: Heaven's Electro-Strike (Multi Sky Lightning Bolts)
+                for (int b = 0; b < 3; ++b) {
+                    float bx = fx + std::sin(globalFrame * 0.7f + b * 2.0f) * 32.0f;
+                    vita2d_draw_line(bx, 0.0f, bx - 18.0f, fy * 0.45f, rgba(175, 230, 255, 245));
+                    vita2d_draw_line(bx - 18.0f, fy * 0.45f, fx, fy - 65.0f, rgba(255, 255, 255, 255));
+                }
+                vita2d_draw_fill_circle(fx, fy - 70.0f, 46.0f * pulse, rgba(110, 200, 255, 165));
+                break;
+            case 3: // KALIYA: Abyssal Decapitation (Dark Eclipse + Criss-Cross Slashes)
+                vita2d_draw_fill_circle(fx, fy - 80.0f, 68.0f, rgba(16, 8, 28, 225));
+                for (int sl = 0; sl < 6; ++sl) {
+                    float ang = sl * 0.52f + fProg * 0.08f;
+                    vita2d_draw_line(fx - std::cos(ang) * 90.0f, fy - 80.0f - std::sin(ang) * 90.0f,
+                                     fx + std::cos(ang) * 90.0f, fy - 80.0f + std::sin(ang) * 90.0f, rgba(210, 95, 255, 245));
+                }
+                break;
+            case 4: // RUDRA: Tectonic Crush (Twin Magma Stone Slabs Closing In)
+                {
+                    float gap = std::max(8.0f, 95.0f - fProg * 1.4f);
+                    vita2d_draw_rectangle(fx - gap - 48.0f, fy - 160.0f, 48.0f, 160.0f, rgba(95, 58, 36, 240));
+                    vita2d_draw_rectangle(fx + gap, fy - 160.0f, 48.0f, 160.0f, rgba(95, 58, 36, 240));
+                    drawRectOutline(fx - gap - 48.0f, fy - 160.0f, 48.0f, 160.0f, 2.5f, rgba(255, 145, 45));
+                    drawRectOutline(fx + gap, fy - 160.0f, 48.0f, 160.0f, 2.5f, rgba(255, 145, 45));
+                }
+                break;
+            case 5: // AAKASH: Cyclone Slice (Emerald Whirlwind + Rapid Katana Arcs)
+                for (int r = 0; r < 8; ++r) {
+                    float rw = 24.0f + r * 9.0f;
+                    float wob = std::sin(globalFrame * 0.45f + r) * 10.0f;
+                    vita2d_draw_line(fx - rw + wob, fy - r * 24.0f, fx + rw + wob, fy - r * 24.0f, rgba(110, 250, 195, 235));
+                }
+                break;
+            case 6: // ZAHRA: Corrosive Meltdown (Toxic Acid Geyser)
+                vita2d_draw_rectangle(fx - 38.0f, fy - 240.0f, 76.0f, 240.0f, rgba(65, 215, 45, 165));
+                vita2d_draw_rectangle(fx - 75.0f, fy - 10.0f, 150.0f, 16.0f, rgba(140, 255, 70, 225));
+                break;
+            case 7: // LOHA: Orbital Laser Barrage (Target Lock -> Crimson Sky Beam)
+                if (fProg < 35) {
+                    drawRectOutline(fx - 36.0f, fy - 140.0f, 72.0f, 140.0f, 3.0f, rgba(255, 45, 65));
+                    vita2d_draw_line(fx - 50.0f, fy - 70.0f, fx + 50.0f, fy - 70.0f, rgba(255, 55, 75));
+                } else {
+                    vita2d_draw_rectangle(fx - 44.0f, 0.0f, 88.0f, fy, rgba(255, 35, 55, 190));
+                    vita2d_draw_rectangle(fx - 18.0f, 0.0f, 36.0f, fy, rgba(255, 225, 230, 245));
+                }
+                break;
+            case 8: // MAYA: Blood Moon Ritual (Giant Blood Moon + Crimson Drain Beams)
+                {
+                    float mx = m.fighters[m.finisherWinnerSlot].x + shakeX;
+                    float my = m.fighters[m.finisherWinnerSlot].y - 80.0f + shakeY;
+                    vita2d_draw_fill_circle(fx, 130.0f, 64.0f * pulse, rgba(205, 20, 50, 195));
+                    vita2d_draw_line(fx, fy - 80.0f, mx, my, rgba(255, 65, 95, 235));
+                    vita2d_draw_line(fx, fy - 60.0f, mx, my - 10.0f, rgba(255, 130, 155, 215));
+                }
+                break;
+            case 9: // KAAL: Soul Harvest (Spectral Soul Vortex)
+                vita2d_draw_fill_circle(fx, fy - 80.0f, 64.0f * pulse, rgba(135, 45, 215, 175));
+                for (int o = 0; o < 6; ++o) {
+                    float ang = globalFrame * 0.16f + o * 1.04f;
+                    vita2d_draw_fill_circle(fx + std::cos(ang) * 52.0f, fy - 80.0f + std::sin(ang) * 52.0f, 8.0f, rgba(255, 205, 65, 235));
+                }
+                break;
+            case 10: // SURYA: Solar Annihilation (Blazing Sun Detonation)
+                vita2d_draw_fill_circle(fx, fy - 95.0f, (30.0f + fProg * 0.7f) * pulse, rgba(255, 195, 40, 195));
+                vita2d_draw_fill_circle(fx, fy - 95.0f, 28.0f + fProg * 0.35f, rgba(255, 250, 210, 240));
+                break;
+            default: // TARA: Celestial Obliteration (Star Sigil + Falling Meteors)
+                for (int mIdx = 0; mIdx < 5; ++mIdx) {
+                    float offset = static_cast<float>((fProg * 14 + mIdx * 95) % 460);
+                    float mx = fx - 120.0f + mIdx * 60.0f;
+                    float my = offset;
+                    vita2d_draw_line(mx - 30.0f, my - 45.0f, mx, my, rgba(160, 235, 255, 235));
+                    vita2d_draw_fill_circle(mx, my, 9.0f, rgba(220, 250, 255, 245));
+                }
+                break;
+        }
+    }
+
     // Cinematic letterbox bars during Super Flash / Finish Him, plus Low-HP Danger Vignette
-    if (m.superFlashFrames > 0 || m.finishHimActive) {
+    if (m.superFlashFrames > 0 || m.xrayFlashFrames > 0 || m.finishHimActive || m.finisherSequenceFrames > 0) {
         vita2d_draw_rectangle(0, 0, SCREEN_W, 14.0f, rgba(0, 0, 0, 220));
         vita2d_draw_rectangle(0, SCREEN_H - 14.0f, SCREEN_W, 14.0f, rgba(0, 0, 0, 220));
     }
@@ -1116,22 +1234,29 @@ void Renderer::drawMatch(const MatchState& m, int globalFrame) {
                            "START: Pause & Move List");
 }
 
-void Renderer::drawPauseOverlay(const UiState& ui) {
+void Renderer::drawPauseOverlay(const UiState& ui, bool bgmMuted, bool sfxMuted) {
     vita2d_draw_rectangle(0, 0, SCREEN_W, SCREEN_H, rgba(0, 0, 0, 175));
-    vita2d_draw_rectangle(280.0f, 110.0f, 400.0f, 320.0f, rgba(22, 16, 30, 245));
-    drawRectOutline(280.0f, 110.0f, 400.0f, 320.0f, 2.5f, rgba(255, 200, 65));
+    vita2d_draw_rectangle(270.0f, 82.0f, 420.0f, 386.0f, rgba(22, 16, 30, 245));
+    drawRectOutline(270.0f, 82.0f, 420.0f, 386.0f, 2.5f, rgba(255, 200, 65));
 
-    drawTextCenteredShadow(SCREEN_W * 0.5f, 158.0f, rgba(255, 205, 65), 1.45f, "PAUSED");
+    drawTextCenteredShadow(SCREEN_W * 0.5f, 126.0f, rgba(255, 205, 65), 1.45f, "PAUSED");
 
-    const char* opts[4] = {"RESUME KOMBAT", "MOVE LIST & COMBOS", "RESTART MATCH", "RETURN TO MENU"};
-    for (int i = 0; i < 4; ++i) {
+    const char* opts[6] = {
+        "RESUME KOMBAT",
+        "MOVE LIST & COMBOS",
+        bgmMuted ? "MUSIC (BGM): OFF" : "MUSIC (BGM): ON",
+        sfxMuted ? "SOUND FX (SFX): OFF" : "SOUND FX (SFX): ON",
+        "RESTART MATCH",
+        "RETURN TO MENU"
+    };
+    for (int i = 0; i < 6; ++i) {
         bool sel = (ui.pauseSelection == i);
-        float y = 212.0f + i * 50.0f;
+        float y = 178.0f + i * 46.0f;
         if (sel) {
-            vita2d_draw_rectangle(315.0f, y - 26.0f, 330.0f, 38.0f, rgba(175, 32, 24, 230));
-            drawRectOutline(315.0f, y - 26.0f, 330.0f, 38.0f, 2.0f, rgba(255, 215, 75));
+            vita2d_draw_rectangle(305.0f, y - 25.0f, 350.0f, 36.0f, rgba(175, 32, 24, 230));
+            drawRectOutline(305.0f, y - 25.0f, 350.0f, 36.0f, 2.0f, rgba(255, 215, 75));
         }
-        drawTextCenteredShadow(SCREEN_W * 0.5f, y, sel ? rgba(255, 235, 145) : rgba(225, 225, 235), 1.0f, opts[i]);
+        drawTextCenteredShadow(SCREEN_W * 0.5f, y, sel ? rgba(255, 235, 145) : rgba(225, 225, 235), 0.96f, opts[i]);
     }
 }
 

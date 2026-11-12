@@ -1,5 +1,6 @@
 #pragma once
 
+#include <atomic>
 #include <cstdint>
 
 namespace vk {
@@ -19,18 +20,31 @@ enum class SoundId {
     KO_BOOM
 };
 
+enum class BgmTrack {
+    NONE = 0,
+    MENU,
+    STORY,
+    BATTLE,
+    BOSS
+};
+
 class AudioEngine {
 public:
     bool init();
     void shutdown();
     void play(SoundId id);
-    void setMuted(bool muted);
-    bool isMuted() const { return muted_; }
+    void setBgm(BgmTrack track);
+    void setBgmMuted(bool muted);
+    void setSfxMuted(bool muted);
+    bool isBgmMuted() const { return bgmMuted_.load(std::memory_order_relaxed); }
+    bool isSfxMuted() const { return sfxMuted_.load(std::memory_order_relaxed); }
 
 private:
     bool initialized_ = false;
     volatile bool running_ = false;
-    volatile bool muted_ = false;
+    std::atomic<bool> bgmMuted_{false};
+    std::atomic<bool> sfxMuted_{false};
+    std::atomic<int> bgmTrack_{0};
     int port_ = -1;
     int threadId_ = -1;
 
@@ -39,4 +53,3 @@ public:
 };
 
 } // namespace vk
-
