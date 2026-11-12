@@ -71,8 +71,10 @@ inline uint32_t alphaBlend(uint32_t dst, uint32_t src) {
 
 int getPhysiqueType(int charId) {
     // 0 = Athletic Standard, 1 = Heavy Titan/Cyber, 2 = Sleek Agile
-    if (charId == 4 || charId == 7 || charId == 10) return 1;
-    if (charId == 6 || charId == 8 || charId == 11) return 2;
+    if (charId == 4 || charId == 7 || charId == 9 || charId == 10 ||
+        charId == 12 || charId == 13 || charId == 20 || charId == 21) return 1;
+    if (charId == 6 || charId == 8 || charId == 11 ||
+        charId == 14 || charId == 16 || charId == 18) return 2;
     return 0;
 }
 
@@ -1023,14 +1025,17 @@ FighterPose FighterGfx::computePose(const Fighter& f, int globalFrame) const {
 
             if (f.stateFrame < mv.startup) {
                 float t = static_cast<float>(f.stateFrame) / static_cast<float>(std::max(1, mv.startup));
-                return lerpPose(idle, windup, std::min(1.0f, t * 1.15f));
+                // Snappy martial-arts anticipation ease-out
+                float e = std::sin(std::min(1.0f, t * 1.15f) * PI * 0.5f);
+                return lerpPose(idle, windup, e);
             } else if (f.stateFrame < mv.startup + mv.active) {
                 float t = static_cast<float>(f.stateFrame - mv.startup) / static_cast<float>(std::max(1, mv.active));
-                return lerpPose(windup, strike, std::min(1.0f, 0.72f + t * 0.28f));
+                return lerpPose(windup, strike, std::min(1.0f, 0.78f + t * 0.22f));
             } else {
                 float t = static_cast<float>(f.stateFrame - (mv.startup + mv.active)) /
                           static_cast<float>(std::max(1, mv.recovery));
-                return lerpPose(strike, idle, clampf(t, 0.0f, 1.0f));
+                float follow = clampf(t, 0.0f, 1.0f);
+                return lerpPose(strike, idle, follow * follow * (3.0f - 2.0f * follow));
             }
         }
 
@@ -1040,29 +1045,56 @@ FighterPose FighterGfx::computePose(const Fighter& f, int globalFrame) const {
 }
 
 void FighterGfx::drawFighter(const Fighter& f, float baseX, float baseY, int globalFrame, bool isGhost, uint8_t ghostAlpha) const {
-    const CharacterDef& ch = getCharacter(f.charId);
-    int phys = getPhysiqueType(f.charId);
+    int safeId = std::max(0, std::min(CHARACTER_COUNT - 1, f.charId));
+    const CharacterDef& ch = getCharacter(safeId);
+    int phys = getPhysiqueType(safeId);
     float dir = static_cast<float>(f.facing);
+    int dress = std::max(0, std::min(COSTUME_COUNT - 1, f.costume));
+
+    bool showCape = ch.hasCape || (dress == 2);
+    bool showScarf = ch.hasScarf || (dress == 1);
+    bool showPauldrons = ch.hasPauldrons || (dress >= 1);
+
+    uint32_t basePrim = ch.primaryColor;
+    uint32_t baseSec  = ch.secondaryColor;
+    uint32_t baseSkin = ch.skinColor;
+    uint32_t baseAcc  = ch.accentColor;
+    uint32_t baseHg   = 0xFFFFFFFF;
+    if (dress == 1) {
+        // Version 2: Revenant Netherklad Dress
+        basePrim = scaleColor(ch.primaryColor, 0.42f);
+        baseSec  = rgba(20, 14, 24);
+        baseSkin = ch.isCyber ? rgba(85, 80, 95) : rgba(155, 148, 168);
+        baseAcc  = rgba(255, 65, 50);
+        baseHg   = rgba(220, 175, 195);
+    } else if (dress == 2) {
+        // Version 3: Royal Grandmaster Dress
+        basePrim = rgba(235, 230, 240);
+        baseSec  = ch.primaryColor;
+        baseAcc  = rgba(255, 210, 65);
+        baseHg   = rgba(255, 245, 215);
+    }
 
     bool hurtFlash = (!isGhost && f.flashFrames > 0 && (f.flashFrames % 2 == 0));
-    uint32_t cPrim = hurtFlash ? rgba(255, 255, 255) : ch.primaryColor;
-    uint32_t cSec = hurtFlash ? rgba(255, 210, 210) : ch.secondaryColor;
-    uint32_t cSkin = hurtFlash ? rgba(255, 255, 255) : ch.skinColor;
-    uint32_t cAcc = hurtFlash ? rgba(255, 255, 255) : ch.accentColor;
-    uint32_t cHg = 0xFFFFFFFF;
+    uint32_t cPrim = hurtFlash ? rgba(255, 255, 255) : basePrim;
+    uint32_t cSec  = hurtFlash ? rgba(255, 210, 210) : baseSec;
+    uint32_t cSkin = hurtFlash ? rgba(255, 255, 255) : baseSkin;
+    uint32_t cAcc  = hurtFlash ? rgba(255, 255, 255) : baseAcc;
+    uint32_t cHg   = hurtFlash ? rgba(255, 255, 255) : baseHg;
 
     if (isGhost) {
         cPrim = (ch.auraColor & 0x00FFFFFFu) | (static_cast<uint32_t>(ghostAlpha) << 24);
         cSec = cPrim;
         cSkin = cPrim;
-        cAcc = (ch.accentColor & 0x00FFFFFFu) | (static_cast<uint32_t>(ghostAlpha) << 24);
+        cAcc = (baseAcc & 0x00FFFFFFu) | (static_cast<uint32_t>(ghostAlpha) << 24);
         cHg = cPrim;
     }
 
     if (!isGhost) {
         float heightAbove = std::max(0.0f, GROUND_Y - f.y);
-        float shadowR = clampf(38.0f * (1.0f - heightAbove / 230.0f), 14.0f, 38.0f);
-        vita2d_draw_fill_circle(baseX, baseY + heightAbove + 4.0f, shadowR, rgba(0, 0, 0, 130));
+        float shadowR = clampf(40.0f * (1.0f - heightAbove / 230.0f), 14.0f, 40.0f);
+        vita2d_draw_fill_circle(baseX - dir * 8.0f, baseY + heightAbove + 5.0f, shadowR * 1.15f, rgba(0, 0, 0, 75));
+        vita2d_draw_fill_circle(baseX, baseY + heightAbove + 4.0f, shadowR, rgba(0, 0, 0, 145));
     }
 
     FighterPose pose = computePose(f, globalFrame);
@@ -1089,7 +1121,7 @@ void FighterGfx::drawFighter(const Fighter& f, float baseX, float baseY, int glo
 
     float torsoWorldAng = pose.torsoAngle + totalRoll;
 
-    if (ch.hasCape) {
+    if (showCape) {
         float capeX, capeY;
         rotPt(-8.0f, -34.0f, capeX, capeY);
         drawPart(cape_, capeX, capeY, torsoWorldAng + pose.capeAngle, 42.0f, 10.0f, scaleColor(cPrim, 0.85f));
@@ -1152,15 +1184,15 @@ void FighterGfx::drawFighter(const Fighter& f, float baseX, float baseY, int glo
     float neckX, neckY;
     rotPt(2.0f, -40.0f, neckX, neckY);
     float headWorldAng = torsoWorldAng + pose.headAngle;
-    if (ch.hasScarf) {
+    if (showScarf) {
         drawPart(scarf_, neckX, neckY - 8.0f, headWorldAng + pose.capeAngle * 0.6f, 39.0f, 10.0f, cAcc);
     }
     drawPart(headBase_, neckX, neckY, headWorldAng, 22.0f, 45.0f, cSkin);
-    drawPart(headgear_[f.charId], neckX, neckY, headWorldAng, 33.0f, 48.0f, cHg);
+    drawPart(headgear_[safeId], neckX, neckY, headWorldAng, 33.0f, 48.0f, cHg);
 
     float fShX, fShY;
     rotPt(6.0f, -34.0f, fShX, fShY);
-    if (ch.hasPauldrons) {
+    if (showPauldrons) {
         drawPart(pauldron_, fShX, fShY - 2.0f, torsoWorldAng, 19.0f, 16.0f, cAcc);
     }
     float fArmAng = torsoWorldAng + pose.fShoulderAngle;
@@ -1192,18 +1224,20 @@ void FighterGfx::drawFighter(const Fighter& f, float baseX, float baseY, int glo
             float ax = isKick ? fFootX : fHandX;
             float ay = isKick ? fFootY : fHandY;
 
-            for (int seg = 0; seg < 4; ++seg) {
-                float a0 = -1.1f + seg * 0.55f;
-                float a1 = a0 + 0.55f;
-                float rad = 34.0f;
+            for (int seg = 0; seg < 6; ++seg) {
+                float a0 = -1.25f + seg * 0.42f;
+                float a1 = a0 + 0.42f;
+                float rad = 38.0f;
                 float x0 = ax - dir * 10.0f + std::cos(a0) * rad * dir;
                 float y0 = ay + std::sin(a0) * rad;
                 float x1 = ax - dir * 10.0f + std::cos(a1) * rad * dir;
                 float y1 = ay + std::sin(a1) * rad;
                 vita2d_draw_line(x0, y0, x1, y1, ch.auraColor);
-                vita2d_draw_line(x0 - dir * 4.0f, y0, x1 - dir * 4.0f, y1, ch.accentColor);
+                vita2d_draw_line(x0 - dir * 4.0f, y0 - 2.0f, x1 - dir * 4.0f, y1 - 2.0f, baseAcc);
+                vita2d_draw_line(x0 - dir * 8.0f, y0 - 4.0f, x1 - dir * 8.0f, y1 - 4.0f, rgba(255, 255, 255, 195));
             }
-            vita2d_draw_fill_circle(ax + dir * 8.0f, ay, 11.0f, (ch.accentColor & 0x00FFFFFFu) | (165u << 24));
+            vita2d_draw_fill_circle(ax + dir * 10.0f, ay, 14.0f, (ch.auraColor & 0x00FFFFFFu) | (135u << 24));
+            vita2d_draw_fill_circle(ax + dir * 10.0f, ay, 7.5f, rgba(255, 255, 255, 210));
         }
 
         if (mv.kind == MoveKind::SPECIAL_1 || mv.kind == MoveKind::SPECIAL_2 ||

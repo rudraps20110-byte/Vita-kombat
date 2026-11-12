@@ -67,15 +67,44 @@ vita_create_vpk(${PROJECT_NAME}.vpk ${VITA_TITLEID} ${PROJECT_NAME}.self
     FILE ${CMAKE_CURRENT_SOURCE_DIR}/assets/stages/stage_dojo.png assets/stages/stage_dojo.png
     FILE ${CMAKE_CURRENT_SOURCE_DIR}/assets/stages/stage_cyber.png assets/stages/stage_cyber.png
     FILE ${CMAKE_CURRENT_SOURCE_DIR}/assets/stages/stage_solar.png assets/stages/stage_solar.png
+    FILE ${CMAKE_CURRENT_SOURCE_DIR}/assets/stages/stage_abyss.png assets/stages/stage_abyss.png
+    FILE ${CMAKE_CURRENT_SOURCE_DIR}/assets/stages/stage_jade.png assets/stages/stage_jade.png
+    FILE ${CMAKE_CURRENT_SOURCE_DIR}/assets/stages/stage_coliseum.png assets/stages/stage_coliseum.png
+    FILE ${CMAKE_CURRENT_SOURCE_DIR}/assets/stages/stage_clockwork.png assets/stages/stage_clockwork.png
+    FILE ${CMAKE_CURRENT_SOURCE_DIR}/assets/stages/stage_nexus.png assets/stages/stage_nexus.png
     FILE ${CMAKE_CURRENT_SOURCE_DIR}/assets/story/art_0.png assets/story/art_0.png
     FILE ${CMAKE_CURRENT_SOURCE_DIR}/assets/story/art_1.png assets/story/art_1.png
     FILE ${CMAKE_CURRENT_SOURCE_DIR}/assets/story/art_2.png assets/story/art_2.png
     FILE ${CMAKE_CURRENT_SOURCE_DIR}/assets/story/art_3.png assets/story/art_3.png
     FILE ${CMAKE_CURRENT_SOURCE_DIR}/assets/story/art_4.png assets/story/art_4.png
+    FILE ${CMAKE_CURRENT_SOURCE_DIR}/assets/story/art_5.png assets/story/art_5.png
+    FILE ${CMAKE_CURRENT_SOURCE_DIR}/assets/story/art_6.png assets/story/art_6.png
+    FILE ${CMAKE_CURRENT_SOURCE_DIR}/assets/story/art_7.png assets/story/art_7.png
+    FILE ${CMAKE_CURRENT_SOURCE_DIR}/assets/story/art_8.png assets/story/art_8.png
+    FILE ${CMAKE_CURRENT_SOURCE_DIR}/assets/story/art_9.png assets/story/art_9.png
+    FILE ${CMAKE_CURRENT_SOURCE_DIR}/assets/story/art_10.png assets/story/art_10.png
+    FILE ${CMAKE_CURRENT_SOURCE_DIR}/assets/story/art_11.png assets/story/art_11.png
     FILE ${CMAKE_CURRENT_SOURCE_DIR}/assets/portraits/char_0.png assets/portraits/char_0.png
     FILE ${CMAKE_CURRENT_SOURCE_DIR}/assets/portraits/char_1.png assets/portraits/char_1.png
     FILE ${CMAKE_CURRENT_SOURCE_DIR}/assets/portraits/char_2.png assets/portraits/char_2.png
     FILE ${CMAKE_CURRENT_SOURCE_DIR}/assets/portraits/char_3.png assets/portraits/char_3.png
     FILE ${CMAKE_CURRENT_SOURCE_DIR}/assets/portraits/char_4.png assets/portraits/char_4.png
+    FILE ${CMAKE_CURRENT_SOURCE_DIR}/assets/portraits/char_5.png assets/portraits/char_5.png
+    FILE ${CMAKE_CURRENT_SOURCE_DIR}/assets/portraits/char_6.png assets/portraits/char_6.png
+    FILE ${CMAKE_CURRENT_SOURCE_DIR}/assets/portraits/char_7.png assets/portraits/char_7.png
+    FILE ${CMAKE_CURRENT_SOURCE_DIR}/assets/portraits/char_8.png assets/portraits/char_8.png
+    FILE ${CMAKE_CURRENT_SOURCE_DIR}/assets/portraits/char_9.png assets/portraits/char_9.png
+    FILE ${CMAKE_CURRENT_SOURCE_DIR}/assets/portraits/char_10.png assets/portraits/char_10.png
+    FILE ${CMAKE_CURRENT_SOURCE_DIR}/assets/portraits/char_11.png assets/portraits/char_11.png
+    FILE ${CMAKE_CURRENT_SOURCE_DIR}/assets/portraits/char_12.png assets/portraits/char_12.png
+    FILE ${CMAKE_CURRENT_SOURCE_DIR}/assets/portraits/char_13.png assets/portraits/char_13.png
+    FILE ${CMAKE_CURRENT_SOURCE_DIR}/assets/portraits/char_14.png assets/portraits/char_14.png
+    FILE ${CMAKE_CURRENT_SOURCE_DIR}/assets/portraits/char_15.png assets/portraits/char_15.png
+    FILE ${CMAKE_CURRENT_SOURCE_DIR}/assets/portraits/char_16.png assets/portraits/char_16.png
+    FILE ${CMAKE_CURRENT_SOURCE_DIR}/assets/portraits/char_17.png assets/portraits/char_17.png
+    FILE ${CMAKE_CURRENT_SOURCE_DIR}/assets/portraits/char_18.png assets/portraits/char_18.png
+    FILE ${CMAKE_CURRENT_SOURCE_DIR}/assets/portraits/char_19.png assets/portraits/char_19.png
+    FILE ${CMAKE_CURRENT_SOURCE_DIR}/assets/portraits/char_20.png assets/portraits/char_20.png
+    FILE ${CMAKE_CURRENT_SOURCE_DIR}/assets/portraits/char_21.png assets/portraits/char_21.png
 )
 

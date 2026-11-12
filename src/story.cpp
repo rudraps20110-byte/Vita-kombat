@@ -323,6 +323,72 @@ const StoryBeat kCh12Beats[] = {
      "parted ways - some born with destiny, some forged by pain, all legends of the Realm!", nullptr, nullptr, 1, 1, false, 0, 0, 0, Difficulty::LEGENDARY, 0}
 };
 
+static const StoryBeat kCh13Beats[] = {
+    {9, StoryArtStyle::SCENE_MAGMA_BIRTH, 12, 15, FighterState::IDLE, FighterState::IDLE, 0, "CHRONICLE XIII",
+     "Deep inside the ASHEN COLISEUM, four-horned dread warlord RAAVAN rallies rogue outcasts.",
+     "Opposite him snarls VIKRAM, the Feral Beast cursed by blood-moon lycanthropy.", nullptr, nullptr, 1, 1, false, 0, 0, 0, Difficulty::PRO, 0},
+    {9, StoryArtStyle::PAINTED_PORTRAIT_0, 12, 15, FighterState::ATTACK, FighterState::IDLE, 1, "RAAVAN",
+     "You carry ancient beast power yet serve no throne, Vikram. Yield or be broken!",
+     "HOW DO YOU CHALLENGE THE BEAST?", "Cut through his frenzy with Obsidian Steel", "Call upon Dark Soul Spikes (+50% Meter)", 1, 1, false, 0, 0, 0, Difficulty::PRO, 0},
+    {9, StoryArtStyle::SCENE_SOUL_NEXUS, 12, 15, FighterState::ATTACK, FighterState::HITSTUN, 1, "RAAVAN",
+     "Taste the Ash Coliseum dust, wild beast! Ten realms are already mine!",
+     nullptr, nullptr, nullptr, 1, 1, true, 12, 15, 9, Difficulty::PRO, 50},
+    {10, StoryArtStyle::SCENE_CYBER_REBUILD, 12, 13, FighterState::IDLE, FighterState::IDLE, 2, "KAVACH",
+     "Halt, Warlord! Tekunin Siege Armor Kavach stands between you and the Clockwork Citadel.",
+     nullptr, nullptr, nullptr, 1, 1, true, 12, 13, 10, Difficulty::PRO, 50},
+    {10, StoryArtStyle::SCENE_CYBER_REBUILD, 12, 21, FighterState::VICTORY, FighterState::IDLE, 0, "NARRATOR",
+     "With Kavach toppled, Raavan awakens the dormant Clockwork Titan KRONOS in the core!",
+     nullptr, nullptr, nullptr, 1, 1, false, 0, 0, 0, Difficulty::PRO, 0}
+};
+
+static const StoryBeat kCh14Beats[] = {
+    {7, StoryArtStyle::SCENE_CRYO_HEART, 14, 1, FighterState::IDLE, FighterState::IDLE, 0, "CHRONICLE XIV",
+     "Beneath the ABYSSAL TRENCH, Tidal Empress NEELA guards the ocean seals beside Himraj.",
+     "Her hydromancy was born when a sunken star fused with the deep-sea crown.", nullptr, nullptr, 1, 1, false, 0, 0, 0, Difficulty::SEMI_PRO, 0},
+    {7, StoryArtStyle::PAINTED_PORTRAIT_1, 14, 20, FighterState::IDLE, FighterState::ATTACK, 2, "BHAIRAV",
+     "The Hellhound Executioner has come for your crown, Empress! Prepare for the gallows!",
+     nullptr, nullptr, nullptr, 1, 1, true, 14, 20, 7, Difficulty::PRO, 25},
+    {8, StoryArtStyle::SCENE_HURRICANE_BLADE, 14, 16, FighterState::IDLE, FighterState::IDLE, 2, "MEERA",
+     "Your tides saved my clan at Jade Pavilion, Neela. Now let us test our sharpest arts!",
+     nullptr, nullptr, nullptr, 1, 1, true, 14, 16, 8, Difficulty::PRO, 50},
+    {8, StoryArtStyle::SCENE_HURRICANE_BLADE, 14, 16, FighterState::VICTORY, FighterState::VICTORY, 0, "EPILOGUE",
+     "United beneath emerald bamboo and abyssal frost, Neela and Meera march toward Kaal's war.",
+     nullptr, nullptr, nullptr, 1, 1, false, 0, 0, 0, Difficulty::PRO, 0}
+};
+
+static const StoryBeat kCh15Beats[] = {
+    {11, StoryArtStyle::SCENE_FALLING_STAR, 17, 11, FighterState::IDLE, FighterState::IDLE, 0, "CHRONICLE XV",
+     "At the CELESTIAL NEXUS, Gravity Monk SHANI bends broken asteroids alongside Tara.",
+     "Elsewhere, Ash Phantom DHUMRA ambushes Sky Valkyrie GARUDA along the sunlit battlements!", nullptr, nullptr, 1, 1, false, 0, 0, 0, Difficulty::PRO, 0},
+    {11, StoryArtStyle::SCENE_FALLING_STAR, 17, 19, FighterState::ATTACK, FighterState::IDLE, 1, "SHANI",
+     "Smokescreens cannot hide from gravity itself, Dhumra. Step out and face judgment!",
+     nullptr, nullptr, nullptr, 1, 1, true, 17, 19, 11, Difficulty::PRO, 50},
+    {6, StoryArtStyle::SCENE_SOLAR_ECLIPSE, 18, 12, FighterState::ATTACK, FighterState::IDLE, 1, "GARUDA",
+     "By the wings of Dawn, Raavan — I will shatter your obsidian horde right here!",
+     nullptr, nullptr, nullptr, 1, 1, true, 18, 12, 6, Difficulty::PRO, 50},
+    {11, StoryArtStyle::SCENE_SOLAR_ECLIPSE, 17, 18, FighterState::VICTORY, FighterState::VICTORY, 0, "EPILOGUE",
+     "Sky Valkyrie and Gravity Monk seal the broken rift above the Celestial Nexus.",
+     nullptr, nullptr, nullptr, 1, 1, false, 0, 0, 0, Difficulty::PRO, 0}
+};
+
+static const StoryBeat kCh16Beats[] = {
+    {10, StoryArtStyle::SCENE_CYBER_REBUILD, 21, 7, FighterState::IDLE, FighterState::IDLE, 0, "CHRONICLE XVI",
+     "Inside the CLOCKWORK CITADEL, ancient automaton god KRONOS activates his Omega Directive.",
+     "Cyrax-forged Loha and Hellhound Bhairav confront the golden titan over the furnace!", nullptr, nullptr, 1, 1, false, 0, 0, 0, Difficulty::LEGENDARY, 0},
+    {10, StoryArtStyle::SCENE_CYBER_REBUILD, 21, 7, FighterState::ATTACK, FighterState::IDLE, 1, "KRONOS",
+     "I witnessed the birth of all twenty-two champions. Only eternity deserves to survive!",
+     nullptr, nullptr, nullptr, 1, 1, true, 21, 7, 10, Difficulty::LEGENDARY, 50},
+    {9, StoryArtStyle::SCENE_SOUL_NEXUS, 21, 20, FighterState::ATTACK, FighterState::IDLE, 1, "KRONOS",
+     "Even Executioner Bhairav falls before cosmic time! Who stands against Omega?",
+     nullptr, nullptr, nullptr, 1, 1, true, 21, 20, 9, Difficulty::LEGENDARY, 75},
+    {11, StoryArtStyle::SCENE_SOLAR_ECLIPSE, 21, 10, FighterState::IDLE, FighterState::ATTACK, 2, "SURYA",
+     "All twenty-two realms stand as one, Kronos — let our final clash decide fate itself!",
+     nullptr, nullptr, nullptr, 1, 1, true, 10, 21, 11, Difficulty::LEGENDARY, 100},
+    {11, StoryArtStyle::SCENE_SOLAR_ECLIPSE, 10, 21, FighterState::VICTORY, FighterState::IDLE, 0, "GRAND FINALE",
+     "The Omega Core stops. Twenty-two legends — mortals, cyborgs, monsters, and gods —",
+     "forged a new era across twelve realms of Vita Kombat!", nullptr, nullptr, 1, 1, false, 0, 0, 0, Difficulty::LEGENDARY, 0}
+};
+
 static const StoryChapter kChapters[STORY_CHAPTER_COUNT] = {
     {0, "CHAPTER I", "BORN IN ASH, REBORN IN HELLFIRE", "POWER: GAINED VIA NETHER REBIRTH",
      "Agni's mortal clan is slaughtered; he rises from death wielding Hellfire.", 0, 0, kCh1Beats, sizeof(kCh1Beats) / sizeof(kCh1Beats[0])},
@@ -347,7 +413,15 @@ static const StoryChapter kChapters[STORY_CHAPTER_COUNT] = {
     {10, "CHAPTER XI", "CHILD OF THE FALLEN STAR", "POWER: BORN WITH ASTRAL SIGHT",
      "Born beneath a shattered comet, Tara guides the warriors toward destiny.", 11, 6, kCh11Beats, sizeof(kCh11Beats) / sizeof(kCh11Beats[0])},
     {11, "CHAPTER XII", "THE UNDYING CONVERGENCE", "POWER: FORBIDDEN SOUL NECROMANCY",
-     "Kaal's master plan erupts - all champions unite for the final war!", 9, 3, kCh12Beats, sizeof(kCh12Beats) / sizeof(kCh12Beats[0])}
+     "Kaal's master plan erupts - all champions unite for the final war!", 9, 3, kCh12Beats, sizeof(kCh12Beats) / sizeof(kCh12Beats[0])},
+    {12, "CHAPTER XIII", "COLISEUM OF BLOOD & IRON", "POWER: OBSIDIAN EMPEROR'S WRATH",
+     "Dread Warlord Raavan challenges Feral Beast Vikram and Iron Juggernaut Kavach.", 12, 9, kCh13Beats, sizeof(kCh13Beats) / sizeof(kCh13Beats[0])},
+    {13, "CHAPTER XIV", "CROWN OF THE ABYSSAL DEEP", "POWER: SUNKEN STAR HYDROMANCY",
+     "Tidal Empress Neela and Jade Assassin Meera battle Executioner Bhairav.", 14, 7, kCh14Beats, sizeof(kCh14Beats) / sizeof(kCh14Beats[0])},
+    {14, "CHAPTER XV", "SKY VALKYRIE & GRAVITY VOID", "POWER: CELESTIAL SINGULARITY",
+     "Gravity Monk Shani and Sky Valkyrie Garuda crush Ash Phantom Dhumra's ambush.", 17, 11, kCh15Beats, sizeof(kCh15Beats) / sizeof(kCh15Beats[0])},
+    {15, "CHAPTER XVI", "CLOCKWORK APOCALYPSE", "POWER: ANCIENT OMEGA TIME ENGINE",
+     "Kronos the Clockwork God awakens in the Brass Citadel for the 22-Realm Finale!", 21, 10, kCh16Beats, sizeof(kCh16Beats) / sizeof(kCh16Beats[0])}
 };
 
 const char* SAVE_DIR = "ux0:data/VitaKombat";

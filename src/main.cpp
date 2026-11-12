@@ -71,19 +71,14 @@ InputState readVitaInput(uint32_t& prevButtons, bool& prevUp, bool& prevDown, bo
 }
 
 void buildArcadeTower(UiState& ui) {
+    int finalBoss = (ui.p1Select == 9) ? 12 : 9; // Kaal is Final Boss (Raavan if playing Kaal)
     int idx = 0;
-    for (int i = 0; i < CHARACTER_COUNT - 1; ++i) {
-        if (i == ui.p1Select) continue;
+    for (int i = 0; i < CHARACTER_COUNT; ++i) {
+        if (i == ui.p1Select || i == finalBoss) continue;
         ui.arcadeOpponents[idx++] = i;
     }
-    // Always include P1 mirror or another warrior before Boss KAAL (9)
-    if (ui.p1Select != CHARACTER_COUNT - 1) {
-        ui.arcadeOpponents[idx++] = ui.p1Select;
-        ui.arcadeOpponents[CHARACTER_COUNT - 1] = CHARACTER_COUNT - 1; // Boss KAAL
-    } else {
-        // If playing as KAAL, final boss is AGNI
-        ui.arcadeOpponents[CHARACTER_COUNT - 1] = 0;
-    }
+    ui.arcadeOpponents[idx++] = ui.p1Select;
+    ui.arcadeOpponents[CHARACTER_COUNT - 1] = finalBoss;
     ui.arcadeStageIndex = 0;
 }
 
@@ -91,8 +86,9 @@ void launchCurrentMatch(MatchState& match, UiState& ui) {
     GameMode mode = static_cast<GameMode>(ui.modeSelection);
     Difficulty diff = static_cast<Difficulty>(ui.difficultySelection);
     int p2 = (mode == GameMode::ARCADE) ? ui.arcadeOpponents[ui.arcadeStageIndex] : ui.p2Select;
+    int p2Dress = (mode == GameMode::ARCADE) ? (ui.arcadeStageIndex % COSTUME_COUNT) : ui.p2Costume;
     int stage = (mode == GameMode::ARCADE) ? (ui.arcadeStageIndex % STAGE_COUNT) : ui.stageSelect;
-    initMatch(match, ui.p1Select, p2, stage, mode, diff);
+    initMatch(match, ui.p1Select, p2, stage, mode, diff, ui.p1Costume, p2Dress);
 }
 
 } // namespace
@@ -118,7 +114,8 @@ int main() {
     loadStoryProgress(storyProg);
 
     auto launchStoryBattle = [&](const StoryBeat& bt) {
-        initMatch(match, bt.battleP1, bt.battleP2, bt.battleStage, GameMode::STORY, bt.battleDiff);
+        Difficulty sDiff = static_cast<Difficulty>(std::max(0, std::min(DIFFICULTY_COUNT - 1, ui.storyDifficulty)));
+        initMatch(match, bt.battleP1, bt.battleP2, bt.battleStage, GameMode::STORY, sDiff, ui.p1Costume, 0);
         if (bt.startMeterBonus > 0) {
             match.fighters[0].meter = std::min(MAX_METER, bt.startMeterBonus);
         }
@@ -183,6 +180,12 @@ int main() {
                     audio.play(SoundId::MENU_MOVE);
                 } else if (in.downPressed) {
                     storyProg.activeChapter = (storyProg.activeChapter + 4) % STORY_CHAPTER_COUNT;
+                    audio.play(SoundId::MENU_MOVE);
+                } else if (in.lPressed) {
+                    ui.storyDifficulty = (ui.storyDifficulty + DIFFICULTY_COUNT - 1) % DIFFICULTY_COUNT;
+                    audio.play(SoundId::MENU_MOVE);
+                } else if (in.rPressed) {
+                    ui.storyDifficulty = (ui.storyDifficulty + 1) % DIFFICULTY_COUNT;
                     audio.play(SoundId::MENU_MOVE);
                 } else if (in.trianglePressed) {
                     storyProg.unlockedChapters = STORY_CHAPTER_COUNT;
@@ -314,17 +317,24 @@ int main() {
 
             case GameScreen::CHAR_SELECT: {
                 int& cur = ui.selectingP2 ? ui.p2Select : ui.p1Select;
+                int& dress = ui.selectingP2 ? ui.p2Costume : ui.p1Costume;
                 if (in.leftPressed) {
-                    cur = (cur % 4 == 0) ? (cur + 3) : (cur - 1);
+                    cur = (cur + CHARACTER_COUNT - 1) % CHARACTER_COUNT;
                     audio.play(SoundId::MENU_MOVE);
                 } else if (in.rightPressed) {
-                    cur = (cur % 4 == 3) ? (cur - 3) : (cur + 1);
+                    cur = (cur + 1) % CHARACTER_COUNT;
                     audio.play(SoundId::MENU_MOVE);
                 } else if (in.upPressed) {
-                    cur = (cur + CHARACTER_COUNT - 4) % CHARACTER_COUNT;
+                    cur = (cur >= 6) ? (cur - 6) : std::min(CHARACTER_COUNT - 1, cur + 18);
                     audio.play(SoundId::MENU_MOVE);
                 } else if (in.downPressed) {
-                    cur = (cur + 4) % CHARACTER_COUNT;
+                    cur = (cur + 6 < CHARACTER_COUNT) ? (cur + 6) : (cur % 6);
+                    audio.play(SoundId::MENU_MOVE);
+                } else if (in.lPressed) {
+                    dress = (dress + COSTUME_COUNT - 1) % COSTUME_COUNT;
+                    audio.play(SoundId::MENU_MOVE);
+                } else if (in.rPressed) {
+                    dress = (dress + 1) % COSTUME_COUNT;
                     audio.play(SoundId::MENU_MOVE);
                 } else if (in.crossPressed || in.startPressed) {
                     audio.play(SoundId::MENU_SELECT);
@@ -361,8 +371,11 @@ int main() {
                 } else if (in.rightPressed) {
                     ui.stageSelect = (ui.stageSelect + 1) % STAGE_COUNT;
                     audio.play(SoundId::MENU_MOVE);
-                } else if (in.upPressed || in.downPressed) {
-                    ui.stageSelect = (ui.stageSelect < 4) ? std::min(6, ui.stageSelect + 4) : (ui.stageSelect - 4);
+                } else if (in.upPressed) {
+                    ui.stageSelect = (ui.stageSelect + STAGE_COUNT - 4) % STAGE_COUNT;
+                    audio.play(SoundId::MENU_MOVE);
+                } else if (in.downPressed) {
+                    ui.stageSelect = (ui.stageSelect + 4) % STAGE_COUNT;
                     audio.play(SoundId::MENU_MOVE);
                 } else if (in.crossPressed || in.startPressed) {
                     audio.play(SoundId::MENU_SELECT);

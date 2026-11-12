@@ -12,8 +12,11 @@ struct UiState {
     int titleSelection = 0;
     int modeSelection = 0;
     int difficultySelection = 2; // 0=Beginner, 1=Amateur, 2=Semi-Pro, 3=Pro, 4=Legendary
+    int storyDifficulty = 2;     // Story mode difficulty selector
     int p1Select = 0;
     int p2Select = 1;
+    int p1Costume = 0;           // 0=Classic, 1=Revenant, 2=Grandmaster
+    int p2Costume = 0;
     bool selectingP2 = false;
     int stageSelect = 0;
     int pauseSelection = 0;
@@ -52,7 +55,7 @@ private:
     vita2d_texture* activeStageTex_ = nullptr;
     int activeStageId_ = -1;
     vita2d_texture* keyArtTex_ = nullptr;
-    vita2d_texture* storyArtTex_[5] = {nullptr, nullptr, nullptr, nullptr, nullptr};
+    vita2d_texture* storyArtTex_[12] = {};
     FighterGfx fighterGfx_;
 
     void drawStoryIllustration(StoryArtStyle style, float x, float y, float w, float h, int globalFrame);

@@ -500,14 +500,17 @@ void applyHitToDefender(MatchState& m, Fighter& attacker, Fighter& defender,
         spawnShockwave(m, defender.x, defender.y - 78.0f, 120.0f, rgba(135, 240, 255));
     }
     if (isFinishTarget && attacker.currentMove.kind == MoveKind::FINISHER) {
-        m.finisherSequenceFrames = 145;
+        m.finisherSequenceFrames = 175;
         m.finisherWinnerSlot = attacker.slot;
         m.finisherCharId = attacker.charId;
         m.finisherTargetX = defender.x;
         m.finisherTargetY = GROUND_Y;
-        m.screenShakeFrames = 45;
-        m.screenShakeMag = 9.0f;
-        m.hitstopFrames = 8;
+        m.screenShakeFrames = 55;
+        m.screenShakeMag = 9.5f;
+        m.hitstopFrames = 6;
+        m.bannerText = "FATALITY!!";
+        m.subBannerText = attCh.finisherName;
+        m.bannerTimer = 175;
         spawnShockwave(m, defender.x, defender.y - 78.0f, 130.0f, attCh.accentColor);
     }
     if (heavy) {
@@ -556,9 +559,9 @@ InputState computeCpuInput(const MatchState& m, Fighter& cpu, const Fighter& pla
         int roll = randRange(0, 99);
 
         if (m.finishHimActive && m.fighters[0].state == FighterState::DIZZY_FINISH_HIM) {
-            if (dist > 140.0f) cpu.aiCurrentIntent = 1;
+            if (dist > 190.0f) cpu.aiCurrentIntent = 1;
             else cpu.aiCurrentIntent = 8;
-            cpu.aiThinkTimer = 8;
+            cpu.aiThinkTimer = 6;
         } else if (player.state == FighterState::ATTACK && dist < 135.0f && roll < blockPct) {
             cpu.aiCurrentIntent = 3; // block
             cpu.aiThinkTimer = randRange(10, 16);
@@ -833,8 +836,8 @@ void updateFighterControl(MatchState& m, Fighter& f, Fighter& opp, const InputSt
             }
         }
 
-        // Chain combo & Special Cancel window after hitting!
-        if (f.moveHasHit && !f.comboCancelled && mv.canSpecialCancel && f.y >= GROUND_Y) {
+        // Expanded MK9 Chain Combo, Launcher Cancel & Special/Super Cancel Window!
+        if (f.moveHasHit && !f.comboCancelled && mv.canSpecialCancel) {
             if (in.lTrigger && in.rTrigger && f.meter >= MAX_METER) {
                 f.comboCancelled = true;
                 triggerAttack(m, f, MoveKind::SUPER_ART, audio);
@@ -850,21 +853,49 @@ void updateFighterControl(MatchState& m, Fighter& f, Fighter& opp, const InputSt
                 triggerAttack(m, f, MoveKind::SPECIAL_2, audio);
                 return;
             }
-            if (f.chainStage == 1) {
-                if (in.trianglePressed) {
+            if (f.y >= GROUND_Y) {
+                if (in.down && in.trianglePressed && mv.kind != MoveKind::CROUCH_PUNCH_UPPERCUT) {
                     f.comboCancelled = true;
-                    triggerAttack(m, f, MoveKind::HEAVY_PUNCH, audio);
+                    triggerAttack(m, f, MoveKind::CROUCH_PUNCH_UPPERCUT, audio);
                     return;
                 }
-                if (in.circlePressed) {
+                if (mv.kind == MoveKind::CROUCH_PUNCH_UPPERCUT && in.up) {
+                    // Instant Jump Cancel for air juggle follow-ups!
                     f.comboCancelled = true;
-                    triggerAttack(m, f, MoveKind::HEAVY_KICK, audio);
+                    const CharacterDef& jch = getCharacter(f.charId);
+                    f.vy = jch.jumpVel;
+                    f.vx = f.facing * (jch.walkSpeed * 1.15f);
+                    f.state = FighterState::JUMP;
+                    f.stateFrame = 0;
                     return;
                 }
-                if (in.crossPressed && mv.kind == MoveKind::LIGHT_PUNCH) {
-                    f.comboCancelled = true;
-                    triggerAttack(m, f, MoveKind::LIGHT_KICK, audio);
-                    return;
+                if (f.chainStage == 1) {
+                    if (in.trianglePressed) {
+                        f.comboCancelled = true;
+                        triggerAttack(m, f, MoveKind::HEAVY_PUNCH, audio);
+                        return;
+                    }
+                    if (in.circlePressed) {
+                        f.comboCancelled = true;
+                        triggerAttack(m, f, MoveKind::HEAVY_KICK, audio);
+                        return;
+                    }
+                    if (in.crossPressed && mv.kind == MoveKind::LIGHT_PUNCH) {
+                        f.comboCancelled = true;
+                        triggerAttack(m, f, MoveKind::LIGHT_KICK, audio);
+                        return;
+                    }
+                } else if (f.chainStage == 2) {
+                    if (in.circlePressed && mv.kind != MoveKind::HEAVY_KICK) {
+                        f.comboCancelled = true;
+                        triggerAttack(m, f, MoveKind::HEAVY_KICK, audio);
+                        return;
+                    }
+                    if (in.down && in.circlePressed) {
+                        f.comboCancelled = true;
+                        triggerAttack(m, f, MoveKind::CROUCH_KICK_SWEEP, audio);
+                        return;
+                    }
                 }
             }
         }
@@ -1086,7 +1117,8 @@ void spawnParticles(MatchState& m, float x, float y, int count, uint32_t color, 
     }
 }
 
-void initMatch(MatchState& m, int p1Char, int p2Char, int stageId, GameMode mode, Difficulty diff) {
+void initMatch(MatchState& m, int p1Char, int p2Char, int stageId, GameMode mode, Difficulty diff,
+               int p1Costume, int p2Costume) {
     m = MatchState{};
     m.stageId = stageId;
     m.mode = mode;
@@ -1099,6 +1131,8 @@ void initMatch(MatchState& m, int p1Char, int p2Char, int stageId, GameMode mode
 
     resetFighterForRound(m.fighters[0], 0, p1Char, false);
     resetFighterForRound(m.fighters[1], 1, p2Char, true);
+    m.fighters[0].costume = p1Costume;
+    m.fighters[1].costume = p2Costume;
     startRound(m);
 }
 
@@ -1109,6 +1143,8 @@ void startRound(MatchState& m) {
     int p2Meter = m.fighters[1].meter;
     int p1Char = m.fighters[0].charId;
     int p2Char = m.fighters[1].charId;
+    int p1Cost = m.fighters[0].costume;
+    int p2Cost = m.fighters[1].costume;
 
     resetFighterForRound(m.fighters[0], 0, p1Char, false);
     resetFighterForRound(m.fighters[1], 1, p2Char, true);
@@ -1116,6 +1152,8 @@ void startRound(MatchState& m) {
     m.fighters[1].roundsWon = p2Wins;
     m.fighters[0].meter = (m.mode == GameMode::TRAINING) ? MAX_METER : p1Meter;
     m.fighters[1].meter = p2Meter;
+    m.fighters[0].costume = p1Cost;
+    m.fighters[1].costume = p2Cost;
 
     m.projectiles.clear();
     m.particles.clear();
@@ -1158,18 +1196,122 @@ void updateMatch(MatchState& m, const InputState& p1Input, AudioEngine& audio) {
 
     if (m.finisherSequenceFrames > 0) {
         m.finisherSequenceFrames--;
+        int fNum = m.finisherSequenceFrames; // counts down 174 -> 0
+        int winSlot = (m.finisherWinnerSlot >= 0 && m.finisherWinnerSlot <= 1) ? m.finisherWinnerSlot : 0;
+        int vicSlot = 1 - winSlot;
+        Fighter& win = m.fighters[winSlot];
+        Fighter& vic = m.fighters[vicSlot];
         const CharacterDef& fCh = getCharacter(m.finisherCharId);
-        if (m.finisherSequenceFrames == 110 || m.finisherSequenceFrames == 70 || m.finisherSequenceFrames == 35) {
-            m.screenShakeFrames = 16;
-            m.screenShakeMag = 8.0f;
-            int loserSlot = (m.finisherWinnerSlot == 0) ? 1 : 0;
-            uint32_t bCol = defenderBloodColor(m.fighters[loserSlot].charId);
-            spawnShockwave(m, m.finisherTargetX, m.finisherTargetY - 78.0f, 135.0f, fCh.accentColor);
-            spawnParticles(m, m.finisherTargetX, m.finisherTargetY - 78.0f, 26, fCh.auraColor, 7.5f, true);
-            spawnParticles(m, m.finisherTargetX, m.finisherTargetY - 78.0f, 20, bCol, 7.2f, true);
-            spawnFloorDecal(m, m.finisherTargetX, randFloat(42.0f, 68.0f), (bCol & 0x00FFFFFFu) | (215u << 24), false);
-            audio.play((m.finisherSequenceFrames == 70) ? SoundId::KO_BOOM : SoundId::HIT_HEAVY);
+        uint32_t bCol = defenderBloodColor(vic.charId);
+
+        win.facing = (vic.x >= win.x) ? 1 : -1;
+        vic.facing = -win.facing;
+
+        // Interactive multi-beat Finisher choreography (Works identically for P1 OR CPU!)
+        if (fNum > 136) {
+            // Beat 1: Winner blitz-dashes up to the dizzy opponent & throws rapid strike
+            float targetPos = clampf(vic.x - win.facing * 52.0f, STAGE_LEFT, STAGE_RIGHT);
+            win.x += (targetPos - win.x) * 0.24f;
+            if (fNum % 4 == 0) {
+                win.ghostX = win.x;
+                win.ghostY = win.y;
+                win.ghostTimer = 8;
+            }
+            if (fNum == 148) {
+                win.currentMove = getMoveData(win.charId, MoveKind::LIGHT_PUNCH);
+                win.state = FighterState::ATTACK;
+                win.stateFrame = win.currentMove.startup;
+                vic.state = FighterState::HITSTUN;
+                vic.flashFrames = 6;
+                spawnParticles(m, vic.x, vic.y - 82.0f, 16, bCol, 5.5f, true);
+                audio.play(SoundId::HIT_LIGHT);
+            } else if (win.state == FighterState::ATTACK) {
+                win.stateFrame++;
+            }
+        } else if (fNum > 92) {
+            // Beat 2: Brutal Heavy Roundhouse / Strike + X-Ray bone fracture!
+            if (fNum == 132) {
+                win.currentMove = getMoveData(win.charId, MoveKind::HEAVY_KICK);
+                win.state = FighterState::ATTACK;
+                win.stateFrame = 0;
+            } else {
+                win.stateFrame++;
+            }
+            if (fNum == 120) {
+                m.xrayFlashFrames = 22;
+                m.xrayTargetSlot = vicSlot;
+                m.screenShakeFrames = 18;
+                m.screenShakeMag = 8.5f;
+                vic.state = FighterState::HITSTUN;
+                vic.flashFrames = 8;
+                spawnShockwave(m, vic.x, vic.y - 80.0f, 125.0f, rgba(135, 240, 255));
+                spawnParticles(m, vic.x, vic.y - 80.0f, 24, bCol, 7.0f, true);
+                spawnFloorDecal(m, vic.x, randFloat(34.0f, 52.0f), (bCol & 0x00FFFFFFu) | (210u << 24), false);
+                audio.play(SoundId::HIT_HEAVY);
+            }
+        } else if (fNum > 48) {
+            // Beat 3: Devastating Uppercut Launcher sending victim skyward!
+            if (fNum == 90) {
+                win.currentMove = getMoveData(win.charId, MoveKind::CROUCH_PUNCH_UPPERCUT);
+                win.state = FighterState::ATTACK;
+                win.stateFrame = 0;
+                audio.play(SoundId::UPPERCUT);
+            } else {
+                win.stateFrame++;
+            }
+            if (fNum == 80) {
+                vic.state = FighterState::AIR_LAUNCHED;
+                vic.vy = -13.5f;
+                vic.vx = win.facing * 2.2f;
+                m.screenShakeFrames = 16;
+                m.screenShakeMag = 9.0f;
+                spawnShockwave(m, vic.x, vic.y - 78.0f, 130.0f, fCh.accentColor);
+                spawnParticles(m, vic.x, vic.y - 78.0f, 26, fCh.auraColor, 7.2f, true);
+                spawnParticles(m, vic.x, vic.y - 78.0f, 20, bCol, 6.8f, true);
+                audio.play(SoundId::HIT_HEAVY);
+            }
+            if (vic.y < GROUND_Y || vic.vy < 0.0f) {
+                vic.vy += GRAVITY * 0.72f;
+                vic.x = clampf(vic.x + vic.vx, STAGE_LEFT, STAGE_RIGHT);
+                vic.y += vic.vy;
+                if (vic.y >= GROUND_Y) {
+                    vic.y = GROUND_Y;
+                    vic.vy = 0.0f;
+                    vic.vx = 0.0f;
+                }
+            }
+        } else {
+            // Beat 4: Signature Elemental/Weapon Finisher Obliteration!
+            if (fNum == 46) {
+                win.currentMove = getMoveData(win.charId, MoveKind::FINISHER);
+                win.state = FighterState::ATTACK;
+                win.stateFrame = 0;
+            } else if (fNum > 18) {
+                win.stateFrame++;
+            } else {
+                win.state = FighterState::VICTORY;
+                win.stateFrame++;
+            }
+            if (vic.y < GROUND_Y) {
+                vic.vy += GRAVITY;
+                vic.y = std::min(GROUND_Y, vic.y + vic.vy);
+            } else {
+                vic.state = FighterState::DEFEATED;
+            }
+            if (fNum == 34) {
+                m.screenShakeFrames = 24;
+                m.screenShakeMag = 10.5f;
+                m.finisherTargetX = vic.x;
+                spawnShockwave(m, vic.x, GROUND_Y - 72.0f, 165.0f, fCh.accentColor);
+                spawnParticles(m, vic.x, GROUND_Y - 72.0f, 36, fCh.auraColor, 8.5f, true);
+                spawnParticles(m, vic.x, GROUND_Y - 72.0f, 28, bCol, 8.0f, true);
+                spawnFloorDecal(m, vic.x, randFloat(54.0f, 82.0f), (bCol & 0x00FFFFFFu) | (230u << 24), false);
+                spawnFloorDecal(m, vic.x, randFloat(46.0f, 70.0f), rgba(18, 12, 10, 215), true);
+                audio.play(SoundId::KO_BOOM);
+            }
         }
+        m.finisherTargetX = vic.x;
+        m.finisherTargetY = vic.y;
     }
 
     // MK9-style smooth camera tracking & dynamic proximity/cinematic zoom
@@ -1242,6 +1384,17 @@ void updateMatch(MatchState& m, const InputState& p1Input, AudioEngine& audio) {
             }
         }
         m.fighters[0].hp = m.fighters[0].maxHp;
+    }
+
+    if (m.finisherSequenceFrames > 0) {
+        for (int i = 0; i < 2; ++i) {
+            if (m.fighters[i].flashFrames > 0) m.fighters[i].flashFrames--;
+            if (m.fighters[i].ghostTimer > 0) m.fighters[i].ghostTimer--;
+            if (m.fighters[i].trailHp > static_cast<float>(m.fighters[i].hp)) {
+                m.fighters[i].trailHp = std::max(static_cast<float>(m.fighters[i].hp), m.fighters[i].trailHp - 6.0f);
+            }
+        }
+        return;
     }
 
     InputState cpuInput = computeCpuInput(m, m.fighters[1], m.fighters[0]);

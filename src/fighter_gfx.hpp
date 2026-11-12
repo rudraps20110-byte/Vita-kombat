@@ -59,7 +59,7 @@ private:
     TexPair scarf_;
     TexPair damageWounds_;
 
-    TexPair headgear_[12];
+    TexPair headgear_[CHARACTER_COUNT];
     TexPair weapon_[7];
     vita2d_texture* bustPortraits_[CHARACTER_COUNT] = {};
     TexPair projComet_;

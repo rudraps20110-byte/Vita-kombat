@@ -171,6 +171,146 @@ static const CharacterDef kCharacters[CHARACTER_COUNT] = {
         rgba(145, 235, 255), rgba(170, 120, 255),
         HeadgearStyle::STARLIGHT_MASK, false, true, false, WeaponStyle::CRESCENT_BLADES, false,
         SpecialEffectType::ASTRAL_SHURIKEN, SpecialEffectType::VOID_BLINK
+    },
+    {
+        12, "RAAVAN", "DREAD WARLORD", "Obsidian Tyranny",
+        "DARK SOUL RIFT", "R + Square  (or D, F + Square)",
+        "Erupts dark underworld spikes beneath his foe.",
+        "TYRANT SLASH", "R + Triangle (or D, B + Triangle)",
+        "Brutal horned phantom blitz through the opponent.",
+        "EMPEROR'S APOCALYPSE", "OBSIDIAN EXECUTION",
+        "All twenty-two realms shall kneel!",
+        4.1f, -15.3f, 1.12f, 90,
+        rgba(155, 22, 45), rgba(36, 16, 24), rgba(185, 140, 120),
+        rgba(255, 175, 65), rgba(220, 45, 95),
+        HeadgearStyle::TITAN_HORNS, true, false, true, WeaponStyle::KATANA, false,
+        SpecialEffectType::SOUL_PILLAR, SpecialEffectType::PHANTOM_SLASH
+    },
+    {
+        13, "KAVACH", "IRON JUGGERNAUT", "Siege Fortress",
+        "FORTRESS RAM", "R + Square  (or D, F + Square)",
+        "Armored siege shoulder rush that smashes through blocks.",
+        "ROCKET BUSTER", "R + Triangle (or D, B + Triangle)",
+        "Heavy armored piston gauntlet strike with shockwave.",
+        "TITANIUM OBLITERATION", "CRUSHING ANNIHILATION",
+        "No blade can scratch my hull!",
+        3.5f, -14.2f, 1.15f, 130,
+        rgba(110, 120, 135), rgba(42, 46, 54), rgba(195, 165, 140),
+        rgba(255, 155, 45), rgba(240, 125, 35),
+        HeadgearStyle::CYBER_VISOR, false, false, true, WeaponStyle::NONE, true,
+        SpecialEffectType::TITAN_CHARGE, SpecialEffectType::ROCKET_GAUNTLET
+    },
+    {
+        14, "NEELA", "TIDAL EMPRESS", "Abyssal Hydromancy",
+        "TIDAL FROST", "R + Square  (or D, F + Square)",
+        "Deep ocean cryo orb that freezes foes in their tracks.",
+        "SURGE DASH", "R + Triangle (or D, B + Triangle)",
+        "Low hydro slide that sweeps opponents off their feet.",
+        "ABYSSAL TSUNAMI", "OCEANIC CRUSH",
+        "Drown beneath the crushing deep!",
+        4.3f, -15.6f, 1.00f, 15,
+        rgba(30, 140, 235), rgba(14, 38, 78), rgba(205, 220, 235),
+        rgba(120, 245, 255), rgba(65, 210, 255),
+        HeadgearStyle::BLOOD_TIARA, true, false, false, WeaponStyle::NONE, false,
+        SpecialEffectType::FREEZE_BLAST, SpecialEffectType::ICE_SLIDE
+    },
+    {
+        15, "VIKRAM", "FERAL BEAST", "Fang & Claw",
+        "SAVAGE POUNCE", "R + Square  (or D, F + Square)",
+        "Wild leaping claw assault that poisons & shreds armor.",
+        "BEAST SLAM", "R + Triangle (or D, B + Triangle)",
+        "Unblockable ground slam that launches foes skyward.",
+        "APEX PREDATOR FRENZY", "FERAL MAULING",
+        "The hunt ends in red!",
+        4.6f, -16.1f, 1.08f, 45,
+        rgba(145, 85, 45), rgba(55, 34, 20), rgba(175, 135, 105),
+        rgba(255, 195, 85), rgba(235, 120, 40),
+        HeadgearStyle::TITAN_HORNS, false, true, false, WeaponStyle::SHADOW_DAGGERS, false,
+        SpecialEffectType::VIPER_LUNGE, SpecialEffectType::SEISMIC_SLAM
+    },
+    {
+        16, "MEERA", "JADE ASSASSIN", "Emerald Gale Style",
+        "JADE RAZOR", "R + Square  (or D, F + Square)",
+        "Flies spinning emerald throwing stars across the arena.",
+        "EMERALD FLASH", "R + Triangle (or D, B + Triangle)",
+        "Wind-fueled dash blade cut faster than sight.",
+        "THOUSAND JADE PETALS", "JADE TEMPEST KILL",
+        "Graceful as bamboo, lethal as steel.",
+        4.7f, -16.2f, 0.99f, 0,
+        rgba(35, 190, 95), rgba(16, 50, 32), rgba(225, 190, 165),
+        rgba(150, 255, 180), rgba(80, 240, 135),
+        HeadgearStyle::STARLIGHT_MASK, false, true, true, WeaponStyle::KATANA, false,
+        SpecialEffectType::ASTRAL_SHURIKEN, SpecialEffectType::GALE_DASH
+    },
+    {
+        17, "SHANI", "GRAVITY MONK", "Chrono-Void Arts",
+        "GRAVITY WELL", "R + Square  (or D, F + Square)",
+        "Erupts a crushing gravity spike right beneath the foe.",
+        "WARP STEP", "R + Triangle (or D, B + Triangle)",
+        "Folds space to strike behind the opponent.",
+        "SINGULARITY COLLAPSE", "VOID IMPLOSION",
+        "Mass, time, and fate bend to me!",
+        4.0f, -15.0f, 1.05f, 35,
+        rgba(135, 90, 230), rgba(36, 22, 68), rgba(200, 175, 155),
+        rgba(255, 215, 115), rgba(175, 110, 255),
+        HeadgearStyle::THUNDER_HAT, true, false, true, WeaponStyle::NONE, false,
+        SpecialEffectType::SCARLET_SPIKE, SpecialEffectType::VOID_BLINK
+    },
+    {
+        18, "GARUDA", "SKY VALKYRIE", "Celestial Wing",
+        "SUNBURST ORB", "R + Square  (or D, F + Square)",
+        "Hurls a blazing golden sky-fire orb at enemies.",
+        "VALKYRIE DIVE", "R + Triangle (or D, B + Triangle)",
+        "Armored aerial golden sword dive across the stage.",
+        "HEAVENSWARD JUDGMENT", "WINGED ANNIHILATION",
+        "Strike from above like falling dawn!",
+        4.5f, -16.4f, 1.03f, 20,
+        rgba(235, 165, 40), rgba(95, 45, 20), rgba(220, 185, 155),
+        rgba(255, 235, 160), rgba(255, 190, 60),
+        HeadgearStyle::SOLAR_HELM, true, false, true, WeaponStyle::SOLAR_BLADE, false,
+        SpecialEffectType::SOLAR_FLARE, SpecialEffectType::RADIANT_DIVE
+    },
+    {
+        19, "DHUMRA", "ASH PHANTOM", "Smokescreen Arts",
+        "ASH DETONATION", "R + Square  (or D, F + Square)",
+        "Fires an explosive ember-ash bomb with burning knockback.",
+        "SMOKE DECOY", "R + Triangle (or D, B + Triangle)",
+        "Calls a smoky shadow clone lunge out of thin air.",
+        "CINDER STORM ECLIPSE", "ASHTHORN ERASURE",
+        "Where there is smoke... there is my blade.",
+        4.5f, -15.8f, 1.01f, 5,
+        rgba(105, 110, 120), rgba(35, 36, 44), rgba(185, 180, 185),
+        rgba(230, 235, 245), rgba(180, 185, 205),
+        HeadgearStyle::NINJA_COWL, false, true, false, WeaponStyle::KUNAI_SPEAR, false,
+        SpecialEffectType::PROJECTILE_BURN, SpecialEffectType::SHADOW_CLONE
+    },
+    {
+        20, "BHAIRAV", "EXECUTIONER", "Crimson Gallows",
+        "REAPER CLEAVE", "R + Square  (or D, F + Square)",
+        "Throws a returning cursed executioner boomerang scythe.",
+        "PYRE UPPERCUT", "R + Triangle (or D, B + Triangle)",
+        "Blazing executioner uppercut launching victims high.",
+        "HELLHOUND GUILLOTINE", "CRIMSON DECAPITATION",
+        "Your sentence has already been signed.",
+        3.9f, -14.8f, 1.11f, 75,
+        rgba(175, 35, 30), rgba(32, 14, 14), rgba(180, 155, 150),
+        rgba(255, 110, 55), rgba(245, 65, 35),
+        HeadgearStyle::SKULL_HOOD, false, false, true, WeaponStyle::SOUL_SCYTHE, false,
+        SpecialEffectType::REAPER_SCYTHE, SpecialEffectType::FLAME_UPPERCUT
+    },
+    {
+        21, "KRONOS", "CLOCKWORK GOD", "Ancient Automata",
+        "CHRONO LASER", "R + Square  (or D, F + Square)",
+        "Fires a high-energy gilded plasma cannon beam.",
+        "TIME BLINK", "R + Triangle (or D, B + Triangle)",
+        "Chrono-teleports behind enemy for an instant shock strike.",
+        "OMEGA TIMEBREAKER", "ETERNAL DISASSEMBLY",
+        "Your final second has struck.",
+        4.0f, -15.0f, 1.10f, 85,
+        rgba(205, 165, 55), rgba(58, 46, 28), rgba(190, 170, 120),
+        rgba(120, 245, 255), rgba(255, 215, 95),
+        HeadgearStyle::CYBER_VISOR, true, false, true, WeaponStyle::NONE, true,
+        SpecialEffectType::PLASMA_BEAM, SpecialEffectType::LIGHTNING_TELEPORT
     }
 };
 
@@ -216,6 +356,36 @@ static const StageDef kStages[STAGE_COUNT] = {
         "app0:assets/stages/stage_solar.png",
         rgba(36, 22, 48), rgba(135, 72, 28), rgba(66, 50, 34), rgba(255, 215, 75),
         6
+    },
+    {
+        7, "ABYSSAL TRENCH", "Sunken Sanctum of Neela",
+        "app0:assets/stages/stage_abyss.png",
+        rgba(6, 24, 54), rgba(16, 74, 128), rgba(14, 38, 56), rgba(85, 235, 255),
+        7
+    },
+    {
+        8, "JADE PAVILION", "Bamboo Fortress of Meera",
+        "app0:assets/stages/stage_jade.png",
+        rgba(10, 30, 22), rgba(24, 85, 52), rgba(28, 48, 34), rgba(110, 250, 155),
+        8
+    },
+    {
+        9, "ASHEN COLISEUM", "Blood Ruins of Vikram",
+        "app0:assets/stages/stage_coliseum.png",
+        rgba(34, 14, 14), rgba(98, 38, 22), rgba(48, 34, 28), rgba(255, 135, 45),
+        9
+    },
+    {
+        10, "CLOCKWORK CITADEL", "Gear Sanctum of Kronos",
+        "app0:assets/stages/stage_clockwork.png",
+        rgba(24, 18, 10), rgba(88, 58, 24), rgba(44, 36, 26), rgba(255, 195, 65),
+        10
+    },
+    {
+        11, "CELESTIAL NEXUS", "Void Bridge of Shani",
+        "app0:assets/stages/stage_nexus.png",
+        rgba(16, 8, 38), rgba(62, 24, 115), rgba(26, 18, 46), rgba(190, 120, 255),
+        11
     }
 };
 

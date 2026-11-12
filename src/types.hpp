@@ -22,9 +22,10 @@ constexpr float GRAVITY = 0.88f;
 constexpr int MAX_HP = 1000;
 constexpr int MAX_METER = 100;
 constexpr int ROUND_TIME_SEC = 99;
-constexpr int CHARACTER_COUNT = 12;
-constexpr int STAGE_COUNT = 7;
+constexpr int CHARACTER_COUNT = 22;
+constexpr int STAGE_COUNT = 12;
 constexpr int DIFFICULTY_COUNT = 5;
+constexpr int COSTUME_COUNT = 3;
 
 enum class GameScreen {
     TITLE,
@@ -277,6 +278,7 @@ struct FloorDecal {
 struct Fighter {
     int slot = 0;
     int charId = 0;
+    int costume = 0; // 0=Classic, 1=Revenant, 2=Grandmaster
     bool isCpu = false;
 
     float x = 260.0f;

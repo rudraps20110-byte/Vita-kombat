@@ -1,10 +1,10 @@
-# Vita Kombat: Realm of Twelve Warriors (PS Vita `.vpk`)
+# Vita Kombat: Realm of Twenty-Two Warriors (PS Vita `.vpk`)
 
-A Mortal Kombat-inspired 2D fighting game built specifically for PlayStation Vita (`960x544`, `vita2d`, `SceCtrl`, `SceAudio`), featuring an **MK9-style HD 2.5D visual overhaul** (micro-textured warrior armor & skin shading, real-time battle-damage wounds, persistent floor blood/oil/scorch decals, dynamic 2.5D camera zoom & parallax, steel-and-blood HUD, and layered bone-crunch audio), a **12-Chapter Manga Storybook Mode (~1 hour)** covering every warrior's origin, **12 unique playable characters** with **12 custom visual Finisher cinematics**, **X-Ray Super Art impact flashes**, **4-track procedural chiptune/arcade BGM** (`MENU`, `STORY`, `BATTLE`, `BOSS`) with Pause-menu Music/SFX toggles, organic 14-joint interpolated animations, chain combos, air juggles, **7 arenas**, **5 difficulty levels (Beginner → Legendary)**, Arcade Tower, VS CPU, and Training Dojo.
+A Mortal Kombat-inspired 2D fighting game built specifically for PlayStation Vita (`960x544`, `vita2d`, `SceCtrl`, `SceAudio`), featuring an **MK9-style HD 2.5D visual overhaul** (micro-textured warrior armor & skin shading, real-time battle-damage wounds, persistent floor blood/oil/scorch decals, dynamic 2.5D camera zoom & parallax, steel-and-blood HUD, and layered bone-crunch audio), a **16-Chapter Manga Storybook Mode with selectable Difficulty (Beginner → Legendary)**, **22 unique playable characters** with **3 Dresses / Armor Versions each (Classic, Revenant, Royal Grandmaster)**, dedicated portrait & story images, **interactive multi-beat Fatality cinematics for both Player and CPU**, **X-Ray Super Art impact flashes**, **4-track procedural arcade BGM** (`MENU`, `STORY`, `BATTLE`, `BOSS`) with Pause-menu Music/SFX toggles, organic 14-joint interpolated animations, expanded target/jump-cancel combos, **12 arenas**, **5 difficulty levels**, Arcade Tower, VS CPU, and Training Dojo.
 
 ---
 
-## 12 Playable Warriors & Special Abilities
+## 22 Playable Warriors & Special Abilities (3 Dresses Each via `L / R`)
 
 | # | Fighter | Title | Special 1 (`R + □` / `D,F + □`) | Special 2 (`R + △` / `D,B + △`) | Finisher (`R + ○`) |
 |---|---|---|---|---|---|
@@ -20,11 +20,21 @@ A Mortal Kombat-inspired 2D fighting game built specifically for PlayStation Vit
 | 10 | **KAAL** | Nether Overlord | **Soul Pillar** (Dark flame under enemy) | **Reaper Scythe** (Boomerang scythe) | Soul Harvest |
 | 11 | **SURYA** | Solar Paladin | **Solar Flare** (Burning radiant sun orb) | **Radiant Dive** (Armored golden blade rush) | Solar Annihilation |
 | 12 | **TARA** | Starlight Phantom | **Astral Shuriken** (Fast cosmic star blade) | **Void Blink** (Cosmic warp slash behind foe) | Celestial Obliteration |
+| 13 | **RAAVAN** | Dread Warlord | **Dark Soul Rift** (Obsidian pillar) | **Tyrant Slash** (Horned phantom blitz) | Obsidian Execution |
+| 14 | **KAVACH** | Iron Juggernaut | **Fortress Ram** (Armored siege charge) | **Rocket Buster** (Heavy piston punch) | Crushing Annihilation |
+| 15 | **NEELA** | Tidal Empress | **Tidal Frost** (Deep ocean cryo orb) | **Surge Dash** (Hydro sweep dash) | Oceanic Crush |
+| 16 | **VIKRAM** | Feral Beast | **Savage Pounce** (Leaping poison claw) | **Beast Slam** (Unblockable launch) | Feral Mauling |
+| 17 | **MEERA** | Jade Assassin | **Jade Razor** (Emerald throwing stars) | **Emerald Flash** (Wind blade dash) | Jade Tempest Kill |
+| 18 | **SHANI** | Gravity Monk | **Gravity Well** (Crushing void spike) | **Warp Step** (Space-fold behind foe) | Void Implosion |
+| 19 | **GARUDA** | Sky Valkyrie | **Sunburst Orb** (Blazing golden orb) | **Valkyrie Dive** (Armored sword dive) | Winged Annihilation |
+| 20 | **DHUMRA** | Ash Phantom | **Ash Detonation** (Explosive ember bomb) | **Smoke Decoy** (Smoky shadow clone) | Ashthorn Erasure |
+| 21 | **BHAIRAV** | Executioner | **Reaper Cleave** (Returning scythe) | **Pyre Uppercut** (Blazing launcher) | Crimson Decapitation |
+| 22 | **KRONOS** | Clockwork God | **Chrono Laser** (Gilded plasma cannon) | **Time Blink** (Chrono-warp shock) | Eternal Disassembly |
 
 ---
 
-## 7 Arenas & 5 Difficulty Levels
-- **Arenas:** Hellfire Pit, Frozen Temple, Thunder Pagoda, Nether Throne, **Crimson Dojo**, **Cyber Foundry**, **Solar Citadel**
+## 12 Arenas & 5 Difficulty Levels (Also Selectable in Story Mode!)
+- **Arenas:** Hellfire Pit, Frozen Temple, Thunder Pagoda, Nether Throne, Crimson Dojo, Cyber Foundry, Solar Citadel, **Abyssal Trench**, **Jade Pavilion**, **Ashen Coliseum**, **Clockwork Citadel**, **Celestial Nexus**
 - **Difficulty Levels:** `Beginner` → `Amateur` → `Semi-Pro` → `Pro` → `Legendary`
 
 ---

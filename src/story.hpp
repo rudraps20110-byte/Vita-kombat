@@ -4,7 +4,7 @@
 
 namespace vk {
 
-constexpr int STORY_CHAPTER_COUNT = 12;
+constexpr int STORY_CHAPTER_COUNT = 16;
 
 enum class StoryArtStyle {
     NONE = 0,

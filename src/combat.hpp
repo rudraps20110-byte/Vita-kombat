@@ -55,7 +55,8 @@ struct MatchState {
     int calloutTimer = 0;
 };
 
-void initMatch(MatchState& m, int p1Char, int p2Char, int stageId, GameMode mode, Difficulty diff);
+void initMatch(MatchState& m, int p1Char, int p2Char, int stageId, GameMode mode, Difficulty diff,
+               int p1Costume = 0, int p2Costume = 0);
 void startRound(MatchState& m);
 void updateMatch(MatchState& m, const InputState& p1Input, AudioEngine& audio);
 void spawnParticles(MatchState& m, float x, float y, int count, uint32_t color, float speed, bool gravity);
