@@ -403,72 +403,97 @@ void Renderer::drawStoryIllustration(StoryArtStyle style, float x, float y, floa
 
 void Renderer::drawStoryChapterSelect(const UiState& ui, const StoryProgress& prog) {
     drawStageBackdrop(getStoryChapter(prog.activeChapter).previewStageId, ui.frameCount, true);
-    drawTextCenteredShadow(SCREEN_W * 0.5f, 38.0f, rgba(255, 205, 65), 1.45f, "STORY MODE - CHRONICLES OF POWER");
 
-    // 4x3 grid of 12 character chapters
+    // Manga Volume Shelf Header
+    vita2d_draw_rectangle(0, 0, SCREEN_W, 46.0f, rgba(16, 12, 22, 235));
+    vita2d_draw_rectangle(0, 44.0f, SCREEN_W, 2.5f, rgba(255, 205, 65));
+    drawTextCenteredShadow(SCREEN_W * 0.5f, 32.0f, rgba(255, 215, 75), 1.38f, "VITA KOMBAT MANGA  -  12 WARRIOR VOLUMES");
+
+    // 4x3 Manga Cover Shelf
     for (int i = 0; i < STORY_CHAPTER_COUNT; ++i) {
         const StoryChapter& sc = getStoryChapter(i);
         const CharacterDef& ch = getCharacter(sc.heroCharId);
         int col = i % 4;
         int row = i / 4;
-        float cx = 34.0f + col * 136.0f;
-        float cy = 56.0f + row * 102.0f;
-        float cw = 126.0f;
-        float chH = 92.0f;
+        float cx = 32.0f + col * 136.0f;
+        float cy = 58.0f + row * 144.0f;
+        float cw = 122.0f;
+        float chH = 132.0f;
 
         bool unlocked = (i < prog.unlockedChapters);
         bool cleared = ((prog.completedMask & (1u << i)) != 0);
         bool sel = (prog.activeChapter == i);
 
-        vita2d_draw_rectangle(cx, cy, cw, chH, rgba(16, 14, 26, 235));
-        fighterGfx_.drawBustPortrait(sc.heroCharId, cx + 26.0f, cy + 4.0f, 72.0f,
-                                     unlocked ? 0xFFFFFFFF : rgba(90, 90, 105, 200));
+        // Book shadow & cream manga cover frame
+        vita2d_draw_rectangle(cx + 4.0f, cy + 4.0f, cw, chH, rgba(6, 5, 10, 200));
+        vita2d_draw_rectangle(cx, cy, cw, chH, rgba(240, 234, 220));
+        // Manga volume spine stripe on left
+        vita2d_draw_rectangle(cx, cy, 12.0f, chH, unlocked ? ch.primaryColor : rgba(70, 70, 80));
+        vita2d_draw_rectangle(cx + 12.0f, cy, 2.0f, chH, rgba(15, 12, 20));
 
-        vita2d_draw_rectangle(cx, cy + chH - 22.0f, cw, 22.0f, rgba(10, 8, 16, 238));
-        drawTextCentered(cx + cw * 0.5f, cy + chH - 6.0f,
-                         unlocked ? ch.accentColor : rgba(130, 130, 145), 0.70f, sc.chapterLabel);
+        // Cover Portrait Artwork
+        fighterGfx_.drawBustPortrait(sc.heroCharId, cx + 22.0f, cy + 20.0f, 88.0f,
+                                     unlocked ? 0xFFFFFFFF : rgba(85, 85, 95, 210));
+        drawRectOutline(cx + 22.0f, cy + 20.0f, 88.0f, 88.0f, 1.5f, rgba(15, 12, 20));
+
+        // Top Volume Banner
+        char volBuf[16];
+        std::snprintf(volBuf, sizeof(volBuf), "VOL.%02d", i + 1);
+        vita2d_draw_rectangle(cx + 14.0f, cy + 2.0f, cw - 16.0f, 16.0f, rgba(18, 14, 26));
+        drawTextShadow(cx + 18.0f, cy + 14.0f, rgba(255, 215, 75), 0.65f, volBuf);
+
+        // Bottom Name Strip
+        vita2d_draw_rectangle(cx + 14.0f, cy + chH - 22.0f, cw - 16.0f, 20.0f, rgba(18, 14, 26));
+        drawTextCentered(cx + 14.0f + (cw - 16.0f) * 0.5f, cy + chH - 6.0f,
+                         unlocked ? ch.accentColor : rgba(130, 130, 145), 0.72f, ch.name);
 
         if (cleared) {
-            vita2d_draw_rectangle(cx + cw - 52.0f, cy + 3.0f, 49.0f, 15.0f, rgba(40, 165, 75));
-            drawTextShadow(cx + cw - 49.0f, cy + 15.0f, rgba(255, 255, 255), 0.62f, "CLEAR");
+            vita2d_draw_rectangle(cx + cw - 46.0f, cy + 2.0f, 44.0f, 15.0f, rgba(40, 165, 75));
+            drawTextShadow(cx + cw - 43.0f, cy + 14.0f, rgba(255, 255, 255), 0.60f, "READ");
         } else if (!unlocked) {
-            drawTextCenteredShadow(cx + cw * 0.5f, cy + 46.0f, rgba(220, 180, 180), 0.72f, "LOCKED");
+            vita2d_draw_rectangle(cx + 24.0f, cy + 54.0f, 84.0f, 22.0f, rgba(16, 12, 22, 225));
+            drawTextCentered(cx + 66.0f, cy + 70.0f, rgba(235, 175, 175), 0.70f, "LOCKED");
         }
 
-        drawRectOutline(cx, cy, cw, chH, sel ? 3.0f : 1.5f,
-                        sel ? rgba(255, 215, 65) : (unlocked ? rgba(90, 85, 120) : rgba(50, 48, 65)));
+        drawRectOutline(cx, cy, cw, chH, sel ? 3.5f : 2.0f,
+                        sel ? rgba(255, 210, 55) : rgba(15, 12, 20));
     }
 
-    // Right-side Chapter Synopsis & Origin Preview
+    // Right-side Manga Back-Cover Synopsis Panel
     const StoryChapter& cur = getStoryChapter(prog.activeChapter);
     const CharacterDef& hero = getCharacter(cur.heroCharId);
     bool curUnlocked = (prog.activeChapter < prog.unlockedChapters);
 
-    vita2d_draw_rectangle(586.0f, 56.0f, 346.0f, 434.0f, rgba(16, 13, 26, 240));
-    drawRectOutline(586.0f, 56.0f, 346.0f, 434.0f, 2.5f, hero.accentColor);
+    vita2d_draw_rectangle(586.0f, 58.0f, 348.0f, 434.0f, rgba(242, 236, 222));
+    drawRectOutline(586.0f, 58.0f, 348.0f, 434.0f, 3.0f, rgba(15, 12, 20));
+    vita2d_draw_rectangle(592.0f, 64.0f, 336.0f, 48.0f, rgba(18, 14, 26));
+    drawTextCentered(760.0f, 84.0f, rgba(255, 210, 70), 0.85f, cur.chapterLabel);
+    drawTextCentered(760.0f, 105.0f, hero.accentColor, 0.96f, cur.title);
 
-    drawTextCenteredShadow(759.0f, 82.0f, rgba(255, 210, 70), 0.92f, cur.chapterLabel);
-    drawTextCenteredShadow(759.0f, 106.0f, hero.accentColor, 1.05f, cur.title);
+    drawStoryIllustration(cur.beats[0].artStyle, 636.0f, 122.0f, 248.0f, 176.0f, ui.frameCount);
 
-    drawStoryIllustration(cur.beats[0].artStyle, 646.0f, 122.0f, 226.0f, 160.0f, ui.frameCount);
+    vita2d_draw_rectangle(598.0f, 308.0f, 324.0f, 24.0f, rgba(18, 14, 26));
+    drawTextCentered(760.0f, 325.0f, rgba(165, 235, 255), 0.74f, cur.powerTag);
 
-    drawTextCenteredShadow(759.0f, 308.0f, rgba(165, 235, 255), 0.78f, cur.powerTag);
-    drawTextShadow(602.0f, 340.0f, rgba(230, 230, 240), 0.76f, cur.summary);
+    vita2d_draw_rectangle(598.0f, 340.0f, 324.0f, 82.0f, rgba(252, 248, 238));
+    drawRectOutline(598.0f, 340.0f, 324.0f, 82.0f, 1.5f, rgba(20, 16, 28));
+    drawTextShadow(608.0f, 362.0f, rgba(25, 20, 32), 0.76f, cur.summary);
 
     char heroBuf[80];
-    std::snprintf(heroBuf, sizeof(heroBuf), "LEAD WARRIOR: %s (%s)", hero.name, hero.title);
-    drawTextShadow(602.0f, 386.0f, hero.accentColor, 0.78f, heroBuf);
+    std::snprintf(heroBuf, sizeof(heroBuf), "PROTAGONIST: %s (%s)", hero.name, hero.title);
+    drawTextShadow(608.0f, 404.0f, rgba(165, 35, 25), 0.76f, heroBuf);
 
     if (curUnlocked) {
-        vita2d_draw_rectangle(614.0f, 426.0f, 290.0f, 42.0f, rgba(185, 34, 24, 235));
-        drawRectOutline(614.0f, 426.0f, 290.0f, 42.0f, 2.0f, rgba(255, 215, 70));
-        drawTextCenteredShadow(759.0f, 453.0f, rgba(255, 240, 155), 0.96f, "Cross (X): PLAY CHAPTER");
+        vita2d_draw_rectangle(612.0f, 434.0f, 296.0f, 42.0f, rgba(185, 34, 24));
+        drawRectOutline(612.0f, 434.0f, 296.0f, 42.0f, 2.5f, rgba(15, 12, 20));
+        drawTextCenteredShadow(760.0f, 461.0f, rgba(255, 240, 155), 0.95f, "Cross (X): OPEN MANGA");
     } else {
-        drawTextCenteredShadow(759.0f, 448.0f, rgba(255, 120, 120), 0.85f, "Clear previous chapter or press Triangle to Unlock All");
+        drawTextCentered(760.0f, 458.0f, rgba(165, 35, 35), 0.78f, "Press Triangle to Unlock All Volumes");
     }
 
-    drawTextCenteredShadow(SCREEN_W * 0.5f, 520.0f, rgba(210, 210, 225), 0.84f,
-                           "D-Pad: Choose Chapter   |   Cross (X): Start   |   Triangle: Unlock All Chapters   |   Circle (O): Back");
+    vita2d_draw_rectangle(0, 502.0f, SCREEN_W, 42.0f, rgba(14, 11, 20, 235));
+    drawTextCenteredShadow(SCREEN_W * 0.5f, 528.0f, rgba(215, 215, 225), 0.82f,
+                           "D-Pad: Choose Volume   |   Cross (X): Read & Play   |   Triangle: Unlock All   |   Circle (O): Back");
 }
 
 void Renderer::drawStoryScene(const UiState& ui, const StoryProgress& prog) {
@@ -476,21 +501,43 @@ void Renderer::drawStoryScene(const UiState& ui, const StoryProgress& prog) {
     int bIdx = std::max(0, std::min(sc.beatCount - 1, prog.activeBeat));
     const StoryBeat& bt = sc.beats[bIdx];
 
-    drawStageBackdrop(bt.stageId, ui.frameCount, false);
-    vita2d_draw_rectangle(0, 0, SCREEN_W, SCREEN_H, rgba(0, 0, 0, 75));
+    // Manga Page Paper Canvas + Halftone Border Shading
+    vita2d_draw_rectangle(0, 0, SCREEN_W, SCREEN_H, rgba(238, 232, 218));
+    for (int gy = 8; gy < SCREEN_H; gy += 16) {
+        vita2d_draw_fill_circle(8.0f, static_cast<float>(gy), 1.5f, rgba(40, 35, 48, 80));
+        vita2d_draw_fill_circle(SCREEN_W - 8.0f, static_cast<float>(gy), 1.5f, rgba(40, 35, 48, 80));
+    }
 
-    // Top Story Header Bar
-    vita2d_draw_rectangle(0, 0, SCREEN_W, 40.0f, rgba(10, 8, 18, 215));
-    drawTextShadow(22.0f, 27.0f, rgba(255, 205, 70), 0.88f, sc.chapterLabel);
-    drawTextShadow(130.0f, 27.0f, rgba(235, 235, 245), 0.88f, sc.title);
-    char progBuf[48];
-    std::snprintf(progBuf, sizeof(progBuf), "SCENE %d / %d", bIdx + 1, sc.beatCount);
-    drawTextShadow(SCREEN_W - 145.0f, 27.0f, rgba(165, 230, 255), 0.82f, progBuf);
+    // Top Manga Chapter / Page Header Strip
+    vita2d_draw_rectangle(16.0f, 10.0f, SCREEN_W - 32.0f, 34.0f, rgba(18, 15, 26));
+    drawTextShadow(28.0f, 33.0f, rgba(255, 210, 70), 0.86f, sc.chapterLabel);
+    drawTextShadow(136.0f, 33.0f, rgba(245, 242, 235), 0.86f, sc.title);
+    char pageBuf[48];
+    std::snprintf(pageBuf, sizeof(pageBuf), "PAGE %02d / %02d", bIdx + 1, sc.beatCount);
+    drawTextShadow(SCREEN_W - 148.0f, 33.0f, rgba(165, 230, 255), 0.82f, pageBuf);
 
-    // Center Illustrated Story Artwork Panel (mandatory visual scene panel!)
-    drawStoryIllustration(bt.artStyle, SCREEN_W * 0.5f - 115.0f, 58.0f, 230.0f, 185.0f, ui.frameCount);
+    // =========================================================================
+    // PANEL 1 (Left Action Stage Panel): Arena Art + Speed Lines + Live Fighters
+    // =========================================================================
+    float p1x = 18.0f, p1y = 52.0f, p1w = 446.0f, p1h = 274.0f;
+    if (activeStageTex_ && activeStageId_ == bt.stageId) {
+        float tw = static_cast<float>(vita2d_texture_get_width(activeStageTex_));
+        float th = static_cast<float>(vita2d_texture_get_height(activeStageTex_));
+        if (tw > 0.0f && th > 0.0f) {
+            vita2d_draw_texture_scale(activeStageTex_, p1x, p1y, p1w / tw, p1h / th);
+        }
+    } else {
+        vita2d_draw_rectangle(p1x, p1y, p1w, p1h, getStage(bt.stageId).skyBottom);
+    }
+    // Panel 1 ground strip + manga action speed lines
+    vita2d_draw_rectangle(p1x, p1y + p1h - 46.0f, p1w, 46.0f, rgba(10, 8, 16, 155));
+    vita2d_draw_line(p1x, p1y + p1h - 46.0f, p1x + p1w, p1y + p1h - 46.0f, getStage(bt.stageId).accentColor);
+    for (int sl = 0; sl < 8; ++sl) {
+        float sy = p1y + 18.0f + sl * 28.0f;
+        vita2d_draw_line(p1x + 4.0f, sy, p1x + 56.0f, sy + 6.0f, rgba(255, 255, 255, 75));
+        vita2d_draw_line(p1x + p1w - 4.0f, sy + 8.0f, p1x + p1w - 56.0f, sy + 2.0f, rgba(255, 255, 255, 75));
+    }
 
-    // Live Animated Warriors on Left & Right acting out the story!
     if (bt.leftChar >= 0) {
         Fighter lf;
         lf.charId = bt.leftChar;
@@ -498,7 +545,7 @@ void Renderer::drawStoryScene(const UiState& ui, const StoryProgress& prog) {
         lf.state = bt.leftPose;
         lf.stateFrame = ui.frameCount;
         lf.y = GROUND_Y;
-        fighterGfx_.drawFighter(lf, 210.0f, 360.0f, ui.frameCount);
+        fighterGfx_.drawFighter(lf, p1x + ((bt.rightChar >= 0) ? 140.0f : 223.0f), p1y + p1h - 32.0f, ui.frameCount);
     }
     if (bt.rightChar >= 0) {
         Fighter rf;
@@ -507,62 +554,129 @@ void Renderer::drawStoryScene(const UiState& ui, const StoryProgress& prog) {
         rf.state = bt.rightPose;
         rf.stateFrame = ui.frameCount;
         rf.y = GROUND_Y;
-        fighterGfx_.drawFighter(rf, 750.0f, 360.0f, ui.frameCount);
+        fighterGfx_.drawFighter(rf, p1x + 312.0f, p1y + p1h - 32.0f, ui.frameCount);
     }
 
-    // Visual-Novel Dialogue Panel at bottom
-    vita2d_draw_rectangle(24.0f, 376.0f, SCREEN_W - 48.0f, 150.0f, rgba(14, 11, 24, 240));
-    uint32_t boxAccent = rgba(255, 205, 70);
-    int speakerChar = sc.heroCharId;
-    if (bt.speaker == 1 && bt.leftChar >= 0) {
-        speakerChar = bt.leftChar;
-        boxAccent = getCharacter(speakerChar).accentColor;
-    } else if (bt.speaker == 2 && bt.rightChar >= 0) {
-        speakerChar = bt.rightChar;
-        boxAccent = getCharacter(speakerChar).accentColor;
+    // Manga Onomatopoeia SFX stamp inside Panel 1
+    const char* sfxText = "STANDOFF...";
+    if (bt.triggersBattle) sfxText = "CLASH!!";
+    else if (bt.leftPose == FighterState::ATTACK || bt.rightPose == FighterState::ATTACK) sfxText = "SLASH!!";
+    else if (bt.leftPose == FighterState::HITSTUN || bt.rightPose == FighterState::HITSTUN) sfxText = "IMPACT!!";
+    else if (bt.leftPose == FighterState::VICTORY || bt.rightPose == FighterState::VICTORY) sfxText = "AWAKEN!!";
+
+    vita2d_draw_rectangle(p1x + 10.0f, p1y + 10.0f, 118.0f, 26.0f, rgba(16, 12, 22, 220));
+    drawRectOutline(p1x + 10.0f, p1y + 10.0f, 118.0f, 26.0f, 2.0f, rgba(255, 210, 65));
+    drawTextCentered(p1x + 69.0f, p1y + 28.0f, rgba(255, 220, 80), 0.82f, sfxText);
+    drawRectOutline(p1x, p1y, p1w, p1h, 4.0f, rgba(14, 12, 18));
+
+    // =========================================================================
+    // PANEL 2 (Top-Right Manga Key Illustration & Power Focus Panel)
+    // =========================================================================
+    float p2x = 476.0f, p2y = 52.0f, p2w = 466.0f, p2h = 274.0f;
+    vita2d_draw_rectangle(p2x, p2y, p2w, p2h, rgba(20, 16, 30));
+
+    // Left slice: Key Story Illustration
+    drawStoryIllustration(bt.artStyle, p2x + 14.0f, p2y + 14.0f, 224.0f, 224.0f, ui.frameCount);
+
+    // Right slice: Character Origin Badge & Reaction Portrait
+    int focusChar = sc.heroCharId;
+    if (bt.speaker == 1 && bt.leftChar >= 0) focusChar = bt.leftChar;
+    else if (bt.speaker == 2 && bt.rightChar >= 0) focusChar = bt.rightChar;
+    const CharacterDef& fCh = getCharacter(focusChar);
+
+    vita2d_draw_rectangle(p2x + 252.0f, p2y + 14.0f, 198.0f, 224.0f, rgba(248, 244, 232));
+    drawRectOutline(p2x + 252.0f, p2y + 14.0f, 198.0f, 224.0f, 2.5f, rgba(15, 12, 20));
+    fighterGfx_.drawBustPortrait(focusChar, p2x + 279.0f, p2y + 24.0f, 144.0f);
+    drawRectOutline(p2x + 279.0f, p2y + 24.0f, 144.0f, 144.0f, 2.0f, fCh.accentColor);
+
+    vita2d_draw_rectangle(p2x + 260.0f, p2y + 176.0f, 182.0f, 52.0f, rgba(18, 14, 26));
+    drawTextCentered(p2x + 351.0f, p2y + 196.0f, fCh.accentColor, 0.88f, fCh.name);
+    drawTextCentered(p2x + 351.0f, p2y + 218.0f, rgba(220, 220, 235), 0.72f, fCh.title);
+
+    // Manga Origin Banner across bottom of Panel 2
+    vita2d_draw_rectangle(p2x + 14.0f, p2y + 244.0f, p2w - 28.0f, 22.0f, rgba(14, 10, 20));
+    drawTextCentered(p2x + p2w * 0.5f, p2y + 260.0f, rgba(165, 235, 255), 0.74f, sc.powerTag);
+    drawRectOutline(p2x, p2y, p2w, p2h, 4.0f, rgba(14, 12, 18));
+
+    // =========================================================================
+    // PANEL 3 (Bottom Manga Speech Bubble / Narration & Decision Panel)
+    // =========================================================================
+    float p3x = 18.0f, p3y = 338.0f, p3w = 924.0f, p3h = 166.0f;
+    vita2d_draw_rectangle(p3x, p3y, p3w, p3h, rgba(24, 20, 34));
+    // Subtle comic halftone background dots inside Panel 3
+    for (int dx = 16; dx < static_cast<int>(p3w) - 10; dx += 24) {
+        vita2d_draw_fill_circle(p3x + dx, p3y + 14.0f, 1.5f, rgba(255, 255, 255, 35));
+        vita2d_draw_fill_circle(p3x + dx, p3y + p3h - 14.0f, 1.5f, rgba(255, 255, 255, 35));
     }
-    drawRectOutline(24.0f, 376.0f, SCREEN_W - 48.0f, 150.0f, 2.5f, boxAccent);
 
-    // Speaker Bust Portrait inside dialogue box
-    fighterGfx_.drawBustPortrait(speakerChar, 38.0f, 392.0f, 96.0f);
-    drawRectOutline(38.0f, 392.0f, 96.0f, 96.0f, 2.0f, boxAccent);
+    // Speech Bubble (White/Cream comic bubble with dark ink border & pointer tail!)
+    float bbx = 36.0f, bby = 356.0f, bbw = 888.0f, bbh = 104.0f;
+    if (bt.choiceA && bt.choiceB) bbh = 76.0f;
 
-    // Nameplate
-    vita2d_draw_rectangle(148.0f, 362.0f, 210.0f, 28.0f, rgba(18, 14, 30, 248));
-    drawRectOutline(148.0f, 362.0f, 210.0f, 28.0f, 2.0f, boxAccent);
-    drawTextShadow(160.0f, 382.0f, boxAccent, 0.92f, bt.speakerName);
+    if (bt.speaker == 0) {
+        // Narrator Manga Box (Double-bordered parchment box)
+        vita2d_draw_rectangle(bbx, bby, bbw, bbh, rgba(248, 242, 226));
+        drawRectOutline(bbx, bby, bbw, bbh, 3.0f, rgba(14, 12, 18));
+        drawRectOutline(bbx + 5.0f, bby + 5.0f, bbw - 10.0f, bbh - 10.0f, 1.2f, rgba(90, 75, 55));
+    } else {
+        // Character Speech Bubble + Tail pointing toward Panel 1 speaker!
+        vita2d_draw_rectangle(bbx, bby, bbw, bbh, rgba(252, 250, 245));
+        drawRectOutline(bbx, bby, bbw, bbh, 3.0f, rgba(14, 12, 18));
+        float tailX = (bt.speaker == 1) ? 165.0f : 330.0f;
+        vita2d_draw_rectangle(tailX - 10.0f, bby - 14.0f, 20.0f, 17.0f, rgba(252, 250, 245));
+        vita2d_draw_line(tailX - 10.0f, bby - 14.0f, tailX - 10.0f, bby, rgba(14, 12, 18));
+        vita2d_draw_line(tailX + 10.0f, bby - 14.0f, tailX + 10.0f, bby, rgba(14, 12, 18));
+    }
 
-    // Typewriter-revealed lines
-    auto drawTyped = [&](float tx, float ty, const char* txt, int maxChars) {
+    // Tilted/Crisp Manga Speaker Badge
+    uint32_t spCol = (bt.speaker == 0) ? rgba(255, 205, 65) : fCh.accentColor;
+    vita2d_draw_rectangle(bbx + 14.0f, bby - 14.0f, 190.0f, 26.0f, rgba(16, 12, 24));
+    drawRectOutline(bbx + 14.0f, bby - 14.0f, 190.0f, 26.0f, 2.0f, spCol);
+    drawTextCentered(bbx + 109.0f, bby + 5.0f, spCol, 0.85f, bt.speakerName);
+
+    // Typewriter-revealed Crisp Ink Text inside Speech Bubble
+    auto drawMangaLine = [&](float tx, float ty, const char* txt, int maxChars) {
         if (!txt) return;
         char buf[200];
         int len = static_cast<int>(std::strlen(txt));
         int show = std::max(0, std::min(len, maxChars));
         std::memcpy(buf, txt, show);
         buf[show] = '\0';
-        drawTextShadow(tx, ty, rgba(242, 242, 250), 0.90f, buf);
+        vita2d_pgf_draw_text(font_, static_cast<int>(tx), static_cast<int>(ty), rgba(18, 15, 24), 0.90f, buf);
     };
 
     int l1Len = bt.line1 ? static_cast<int>(std::strlen(bt.line1)) : 0;
-    drawTyped(150.0f, 418.0f, bt.line1, ui.storyRevealChars);
+    drawMangaLine(bbx + 22.0f, bby + 36.0f, bt.line1, ui.storyRevealChars);
     if (ui.storyRevealChars > l1Len && bt.line2) {
-        drawTyped(150.0f, 446.0f, bt.line2, ui.storyRevealChars - l1Len);
+        drawMangaLine(bbx + 22.0f, bby + 64.0f, bt.line2, ui.storyRevealChars - l1Len);
     }
 
     if (bt.choiceA && bt.choiceB) {
         for (int c = 0; c < 2; ++c) {
             bool sel = (ui.storyChoiceSel == c);
-            float cy = 468.0f + c * 28.0f;
-            vita2d_draw_rectangle(150.0f, cy, 740.0f, 24.0f, sel ? rgba(180, 32, 24, 235) : rgba(24, 20, 36, 220));
-            drawRectOutline(150.0f, cy, 740.0f, 24.0f, 1.5f, sel ? rgba(255, 215, 70) : rgba(85, 80, 110));
-            drawTextShadow(164.0f, cy + 17.0f, sel ? rgba(255, 240, 150) : rgba(215, 215, 225), 0.80f,
-                           (c == 0) ? bt.choiceA : bt.choiceB);
+            float cy = 440.0f + c * 28.0f;
+            vita2d_draw_rectangle(bbx, cy, bbw, 24.0f, sel ? rgba(190, 34, 24) : rgba(240, 234, 220));
+            drawRectOutline(bbx, cy, bbw, 24.0f, 2.0f, sel ? rgba(255, 215, 65) : rgba(14, 12, 18));
+            vita2d_pgf_draw_text(font_, static_cast<int>(bbx + 16.0f), static_cast<int>(cy + 17.0f),
+                                 sel ? rgba(255, 240, 150) : rgba(20, 16, 28), 0.80f,
+                                 (c == 0) ? bt.choiceA : bt.choiceB);
         }
+    } else if (bt.triggersBattle) {
+        vita2d_draw_rectangle(bbx, 466.0f, bbw, 28.0f, rgba(185, 28, 22));
+        drawRectOutline(bbx, 466.0f, bbw, 28.0f, 2.0f, rgba(255, 215, 70));
+        drawTextCenteredShadow(SCREEN_W * 0.5f, 486.0f, rgba(255, 240, 145), 0.90f,
+                               "CLASH!!  PRESS CROSS (X) TO FIGHT THIS CHAPTER BATTLE!");
     } else {
-        const char* prompt = bt.triggersBattle ? "Cross (X): BEGIN STORY BATTLE!   |   Circle (O): Chapter Menu"
-                                               : "Cross (X): Continue   |   START: Skip Cutscene   |   Circle (O): Back";
-        drawTextShadow(150.0f, 512.0f, rgba(255, 215, 95), 0.78f, prompt);
+        drawTextCentered(SCREEN_W * 0.5f, 488.0f, rgba(255, 220, 110), 0.82f,
+                         "Press Cross (X) to Turn Page  >>");
     }
+
+    drawRectOutline(p3x, p3y, p3w, p3h, 4.0f, rgba(14, 12, 18));
+
+    // Bottom Manga Footer Strip
+    vita2d_draw_rectangle(16.0f, 512.0f, SCREEN_W - 32.0f, 24.0f, rgba(18, 15, 26));
+    drawTextCentered(SCREEN_W * 0.5f, 529.0f, rgba(220, 220, 235), 0.76f,
+                     "Cross (X): Next Page   |   L: Prev Page   |   START: Skip to Fight   |   Circle (O): Volume Shelf");
 }
 
 void Renderer::drawModeSelect(const UiState& ui) {

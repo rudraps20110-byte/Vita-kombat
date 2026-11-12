@@ -240,6 +240,13 @@ int main() {
                         storyProg.activeBeat++;
                         ui.storyRevealChars = 0;
                     }
+                } else if (in.lPressed) {
+                    if (storyProg.activeBeat > 0) {
+                        audio.play(SoundId::MENU_MOVE);
+                        storyProg.activeBeat--;
+                        ui.storyRevealChars = 999;
+                        ui.storyChoiceSel = 0;
+                    }
                 } else if (in.startPressed) {
                     // Fast-forward cutscene to next battle or end of chapter
                     audio.play(SoundId::MENU_SELECT);
