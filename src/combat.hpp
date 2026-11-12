@@ -11,11 +11,12 @@ struct MatchState {
     Fighter fighters[2];
     std::vector<Projectile> projectiles;
     std::vector<Particle> particles;
+    std::vector<Shockwave> shockwaves;
     std::vector<AcidPool> acidPools;
 
     int stageId = 0;
     GameMode mode = GameMode::ARCADE;
-    Difficulty difficulty = Difficulty::NORMAL;
+    Difficulty difficulty = Difficulty::SEMI_PRO;
 
     int roundNumber = 1;
     int roundTimerFrames = ROUND_TIME_SEC * 60;
@@ -47,6 +48,7 @@ void initMatch(MatchState& m, int p1Char, int p2Char, int stageId, GameMode mode
 void startRound(MatchState& m);
 void updateMatch(MatchState& m, const InputState& p1Input, AudioEngine& audio);
 void spawnParticles(MatchState& m, float x, float y, int count, uint32_t color, float speed, bool gravity);
+void spawnShockwave(MatchState& m, float x, float y, float maxRadius, uint32_t color);
 
 } // namespace vk
 

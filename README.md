@@ -1,10 +1,10 @@
-# Vita Kombat: Realm of Ten Warriors (PS Vita `.vpk`)
+# Vita Kombat: Realm of Twelve Warriors (PS Vita `.vpk`)
 
-A Mortal Kombat-inspired 2D fighting game built specifically for PlayStation Vita (`960x544`, `vita2d`, `SceCtrl`, `SceAudio`), featuring **10 unique playable characters**, each with **2 signature special abilities, a Super Art, and a Finisher**, plus chain combos, air juggles, 4 animated arenas, Arcade Tower, VS CPU, and Training Dojo.
+A Mortal Kombat-inspired 2D fighting game built specifically for PlayStation Vita (`960x544`, `vita2d`, `SceCtrl`, `SceAudio`), featuring **12 unique playable characters**, each with **2 signature special abilities, a Super Art, and a Finisher**, plus interpolated animations, chain combos, air juggles, **7 arenas**, **5 difficulty levels (Beginner → Legendary)**, Arcade Tower, VS CPU, and Training Dojo.
 
 ---
 
-## 10 Playable Warriors & Special Abilities
+## 12 Playable Warriors & Special Abilities
 
 | # | Fighter | Title | Special 1 (`R + □` / `D,F + □`) | Special 2 (`R + △` / `D,B + △`) | Finisher (`R + ○`) |
 |---|---|---|---|---|---|
@@ -18,6 +18,14 @@ A Mortal Kombat-inspired 2D fighting game built specifically for PlayStation Vit
 | 8 | **LOHA** | Cyber Enforcer | **Plasma Cannon** (Heavy laser blast) | **Rocket Gauntlet** (Armored jet punch) | Orbital Laser Barrage |
 | 9 | **MAYA** | Blood Sorceress | **Crimson Drain** (Lifesteal blood orb!) | **Scarlet Spike** (Ground spike eruption) | Blood Moon Ritual |
 | 10 | **KAAL** | Nether Overlord | **Soul Pillar** (Dark flame under enemy) | **Reaper Scythe** (Boomerang scythe) | Soul Harvest |
+| 11 | **SURYA** | Solar Paladin | **Solar Flare** (Burning radiant sun orb) | **Radiant Dive** (Armored golden blade rush) | Solar Annihilation |
+| 12 | **TARA** | Starlight Phantom | **Astral Shuriken** (Fast cosmic star blade) | **Void Blink** (Cosmic warp slash behind foe) | Celestial Obliteration |
+
+---
+
+## 7 Arenas & 5 Difficulty Levels
+- **Arenas:** Hellfire Pit, Frozen Temple, Thunder Pagoda, Nether Throne, **Crimson Dojo**, **Cyber Foundry**, **Solar Citadel**
+- **Difficulty Levels:** `Beginner` → `Amateur` → `Semi-Pro` → `Pro` → `Legendary`
 
 ---
 

@@ -154,10 +154,10 @@ int main() {
                     ui.modeSelection = (ui.modeSelection + 1) % 3;
                     audio.play(SoundId::MENU_MOVE);
                 } else if (in.lPressed || in.leftPressed) {
-                    ui.difficultySelection = (ui.difficultySelection + 2) % 3;
+                    ui.difficultySelection = (ui.difficultySelection + DIFFICULTY_COUNT - 1) % DIFFICULTY_COUNT;
                     audio.play(SoundId::MENU_MOVE);
                 } else if (in.rPressed || in.rightPressed) {
-                    ui.difficultySelection = (ui.difficultySelection + 1) % 3;
+                    ui.difficultySelection = (ui.difficultySelection + 1) % DIFFICULTY_COUNT;
                     audio.play(SoundId::MENU_MOVE);
                 } else if (in.crossPressed || in.startPressed) {
                     audio.play(SoundId::MENU_SELECT);
@@ -167,7 +167,7 @@ int main() {
                     audio.play(SoundId::MENU_MOVE);
                     screen = GameScreen::TITLE;
                 }
-                renderer.prepareStage(3);
+                renderer.prepareStage(6);
                 renderer.beginFrame();
                 renderer.drawModeSelect(ui);
                 renderer.endFrame();
@@ -176,13 +176,16 @@ int main() {
             case GameScreen::CHAR_SELECT: {
                 int& cur = ui.selectingP2 ? ui.p2Select : ui.p1Select;
                 if (in.leftPressed) {
-                    cur = (cur % 5 == 0) ? (cur + 4) : (cur - 1);
+                    cur = (cur % 4 == 0) ? (cur + 3) : (cur - 1);
                     audio.play(SoundId::MENU_MOVE);
                 } else if (in.rightPressed) {
-                    cur = (cur % 5 == 4) ? (cur - 4) : (cur + 1);
+                    cur = (cur % 4 == 3) ? (cur - 3) : (cur + 1);
                     audio.play(SoundId::MENU_MOVE);
-                } else if (in.upPressed || in.downPressed) {
-                    cur = (cur + 5) % CHARACTER_COUNT;
+                } else if (in.upPressed) {
+                    cur = (cur + CHARACTER_COUNT - 4) % CHARACTER_COUNT;
+                    audio.play(SoundId::MENU_MOVE);
+                } else if (in.downPressed) {
+                    cur = (cur + 4) % CHARACTER_COUNT;
                     audio.play(SoundId::MENU_MOVE);
                 } else if (in.crossPressed || in.startPressed) {
                     audio.play(SoundId::MENU_SELECT);
@@ -218,6 +221,9 @@ int main() {
                     audio.play(SoundId::MENU_MOVE);
                 } else if (in.rightPressed) {
                     ui.stageSelect = (ui.stageSelect + 1) % STAGE_COUNT;
+                    audio.play(SoundId::MENU_MOVE);
+                } else if (in.upPressed || in.downPressed) {
+                    ui.stageSelect = (ui.stageSelect < 4) ? std::min(6, ui.stageSelect + 4) : (ui.stageSelect - 4);
                     audio.play(SoundId::MENU_MOVE);
                 } else if (in.crossPressed || in.startPressed) {
                     audio.play(SoundId::MENU_SELECT);

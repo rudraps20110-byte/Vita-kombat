@@ -62,5 +62,8 @@ vita_create_vpk(${PROJECT_NAME}.vpk ${VITA_TITLEID} ${PROJECT_NAME}.self
     FILE ${CMAKE_CURRENT_SOURCE_DIR}/assets/stages/stage_ice.png assets/stages/stage_ice.png
     FILE ${CMAKE_CURRENT_SOURCE_DIR}/assets/stages/stage_storm.png assets/stages/stage_storm.png
     FILE ${CMAKE_CURRENT_SOURCE_DIR}/assets/stages/stage_nether.png assets/stages/stage_nether.png
+    FILE ${CMAKE_CURRENT_SOURCE_DIR}/assets/stages/stage_dojo.png assets/stages/stage_dojo.png
+    FILE ${CMAKE_CURRENT_SOURCE_DIR}/assets/stages/stage_cyber.png assets/stages/stage_cyber.png
+    FILE ${CMAKE_CURRENT_SOURCE_DIR}/assets/stages/stage_solar.png assets/stages/stage_solar.png
 )
 

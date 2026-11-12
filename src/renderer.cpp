@@ -159,6 +159,21 @@ void Renderer::drawStageBackdrop(int stageId, int globalFrame, bool dim) {
             float px = static_cast<float>((seed * 41 + globalFrame * 3) % SCREEN_W);
             float py = static_cast<float>((seed * 29 + globalFrame * 9) % SCREEN_H);
             vita2d_draw_line(px, py, px - 5.0f, py + 16.0f, rgba(160, 195, 255, 120));
+        } else if (st.weatherType == 4) {
+            // Crimson sakura petals
+            float px = static_cast<float>((seed * 27 + globalFrame * 2) % SCREEN_W);
+            float py = static_cast<float>((seed * 19 + globalFrame + (i % 3)) % SCREEN_H);
+            vita2d_draw_fill_circle(px, py, 2.6f, rgba(255, 145, 175, 175));
+        } else if (st.weatherType == 5) {
+            // Cyber foundry sparks
+            float px = static_cast<float>((seed * 33 + globalFrame * 2) % SCREEN_W);
+            float py = static_cast<float>((seed * 23 + globalFrame * 4) % SCREEN_H);
+            vita2d_draw_fill_circle(px, py, 2.0f, rgba(255, 170, 60, 195));
+        } else if (st.weatherType == 6) {
+            // Solar golden motes
+            float px = static_cast<float>((seed * 29 + globalFrame) % SCREEN_W);
+            float py = SCREEN_H - static_cast<float>((seed * 17 + globalFrame) % SCREEN_H);
+            vita2d_draw_fill_circle(px, py, 2.8f, rgba(255, 225, 110, 160));
         } else {
             // Spectral mist wisps
             float px = static_cast<float>((seed * 37 + globalFrame) % SCREEN_W);
@@ -261,52 +276,67 @@ void Renderer::drawFighterModel(const Fighter& f, float baseX, float baseY, int 
             break;
         case FighterState::ATTACK: {
             const MoveData& mv = f.currentMove;
-            bool isActive = (f.stateFrame >= mv.startup && f.stateFrame < mv.startup + mv.active);
-            float ext = isActive ? 1.0f : 0.45f;
+            float ext = 1.0f;
+            if (f.stateFrame < mv.startup) {
+                float p = static_cast<float>(f.stateFrame) / static_cast<float>(std::max(1, mv.startup));
+                ext = 0.20f + 0.35f * p;
+            } else if (f.stateFrame < mv.startup + mv.active) {
+                ext = 1.05f;
+            } else {
+                float p = static_cast<float>(f.stateFrame - (mv.startup + mv.active)) /
+                          static_cast<float>(std::max(1, mv.recovery));
+                ext = std::max(0.15f, 1.0f - p * 0.85f);
+            }
             switch (mv.kind) {
                 case MoveKind::LIGHT_PUNCH:
                 case MoveKind::HEAVY_PUNCH:
                 case MoveKind::THROW_GRAB:
-                    leanX = 10.0f * ext;
-                    fHandX = 22.0f + 48.0f * ext;
-                    fHandY = -98.0f;
+                    leanX = 12.0f * ext;
+                    fHandX = 20.0f + 52.0f * ext;
+                    fHandY = -98.0f + ((mv.kind == MoveKind::HEAVY_PUNCH) ? -6.0f * ext : 0.0f);
+                    bHandX = -18.0f; bHandY = -90.0f;
                     break;
                 case MoveKind::LIGHT_KICK:
                 case MoveKind::HEAVY_KICK:
                 case MoveKind::JUMP_KICK:
-                    leanX = -8.0f * ext;
-                    fFootX = 18.0f + 56.0f * ext;
-                    fFootY = -76.0f * ext;
+                    leanX = -10.0f * ext;
+                    fFootX = 16.0f + 58.0f * ext;
+                    fFootY = -78.0f * ext;
+                    fHandX = 14.0f; fHandY = -104.0f;
                     break;
                 case MoveKind::CROUCH_PUNCH_UPPERCUT:
-                    crouchDrop = isActive ? -6.0f : 28.0f;
-                    leanX = 12.0f * ext;
-                    fHandX = 34.0f;
-                    fHandY = -148.0f * ext - 50.0f * (1.0f - ext);
+                    crouchDrop = (f.stateFrame >= mv.startup) ? (-8.0f * ext) : 30.0f;
+                    leanX = 14.0f * ext;
+                    fHandX = 34.0f * ext + 10.0f;
+                    fHandY = -60.0f - 96.0f * ext;
                     break;
                 case MoveKind::CROUCH_KICK_SWEEP:
                     crouchDrop = 38.0f;
-                    leanX = -10.0f;
-                    fFootX = 22.0f + 58.0f * ext;
-                    fFootY = -8.0f;
+                    leanX = -14.0f * ext;
+                    fFootX = 20.0f + 62.0f * ext;
+                    fFootY = -6.0f;
                     break;
                 case MoveKind::JUMP_PUNCH:
-                    fHandX = 48.0f * ext;
-                    fHandY = -74.0f;
+                    fHandX = 50.0f * ext;
+                    fHandY = -72.0f;
                     break;
                 case MoveKind::SPECIAL_1:
                 case MoveKind::SPECIAL_2:
                 case MoveKind::SUPER_ART:
                 case MoveKind::FINISHER:
-                    leanX = 14.0f * ext;
-                    fHandX = 56.0f * ext;
+                    leanX = 16.0f * ext;
+                    fHandX = 58.0f * ext;
                     fHandY = -92.0f;
-                    bHandX = 40.0f * ext;
-                    bHandY = -86.0f;
+                    bHandX = 38.0f * ext;
+                    bHandY = -84.0f;
                     if (mv.specialType == SpecialEffectType::ICE_SLIDE) {
                         crouchDrop = 34.0f;
-                        fFootX = 64.0f;
+                        fFootX = 64.0f * ext;
                         fFootY = -10.0f;
+                    } else if (mv.specialType == SpecialEffectType::SEISMIC_SLAM) {
+                        crouchDrop = 28.0f * ext;
+                        fHandX = 36.0f; fHandY = -18.0f;
+                        bHandX = 24.0f; bHandY = -20.0f;
                     }
                     break;
                 default:
@@ -340,36 +370,52 @@ void Renderer::drawFighterModel(const Fighter& f, float baseX, float baseY, int 
     float shX = leanX;
     float hdX = leanX * 1.15f;
 
-    // Flowing cape / sash for characters with capes
+    // Flowing cape / scarf ribbons
     if (ch.hasCape) {
         float sway = std::sin(globalFrame * 0.16f + f.slot) * 10.0f;
-        drawCapsule(X(shX - 6.0f), Y(shoulderY), X(hipX - 28.0f - sway * 0.4f), Y(hipY + 40.0f), 12.0f * scale, darken(cPrim, 0.75f));
+        drawCapsule(X(shX - 6.0f), Y(shoulderY), X(hipX - 30.0f - sway * 0.4f), Y(hipY + 42.0f), 12.5f * scale, darken(cPrim, 0.72f));
+    }
+    if (ch.hasScarf) {
+        float wave = std::sin(globalFrame * 0.22f + f.slot * 2.0f) * 9.0f;
+        drawCapsule(X(hdX - 8.0f), Y(headY + 10.0f), X(hdX - 30.0f), Y(headY + 24.0f + wave * 0.5f), 4.0f * scale, cAcc);
     }
 
-    // Back leg
+    // Back leg + shin boot
     float bKneeX = (hipX + bFootX) * 0.5f + 6.0f;
     float bKneeY = (hipY + bFootY) * 0.5f - 4.0f;
     drawCapsule(X(hipX - 4.0f), Y(hipY), X(bKneeX), Y(bKneeY), 9.5f * scale, darken(cSec, 0.85f));
     drawCapsule(X(bKneeX), Y(bKneeY), X(bFootX), Y(bFootY - 6.0f), 8.5f * scale, darken(cPrim, 0.8f));
+    vita2d_draw_fill_circle(X(bFootX + 3.0f), Y(bFootY - 4.0f), 7.5f * scale, darken(cAcc, 0.65f));
 
-    // Back arm
+    // Back arm + gauntlet
     float bElbX = (shX + bHandX) * 0.5f - 6.0f;
     float bElbY = (shoulderY + bHandY) * 0.5f + 8.0f;
     drawCapsule(X(shX - 5.0f), Y(shoulderY), X(bElbX), Y(bElbY), 7.5f * scale, darken(cSkin, 0.85f));
-    drawCapsule(X(bElbX), Y(bElbY), X(bHandX), Y(bHandY), 7.0f * scale, darken(cPrim, 0.85f));
+    drawCapsule(X(bElbX), Y(bElbY), X(bHandX), Y(bHandY), 7.2f * scale, darken(cPrim, 0.85f));
+    vita2d_draw_fill_circle(X(bHandX), Y(bHandY), 7.5f * scale, darken(cAcc, 0.85f));
 
-    // Torso & chest armor
-    drawCapsule(X(hipX), Y(hipY), X(shX), Y(shoulderY), 15.5f * scale, cSec);
-    drawCapsule(X(hipX + 2.0f), Y(hipY - 8.0f), X(shX + 3.0f), Y(shoulderY + 2.0f), 12.0f * scale, cPrim);
+    // Torso, shaded chest armor & cyber core
+    drawCapsule(X(hipX), Y(hipY), X(shX), Y(shoulderY), 16.5f * scale, cSec);
+    drawCapsule(X(hipX + 2.0f), Y(hipY - 8.0f), X(shX + 3.0f), Y(shoulderY + 2.0f), 12.5f * scale, cPrim);
+    drawCapsule(X(shX - 6.0f), Y(shoulderY + 3.0f), X(shX + 8.0f), Y(shoulderY + 14.0f), 5.5f * scale, darken(cAcc, 0.85f));
+    if (ch.isCyber) {
+        vita2d_draw_fill_circle(X(shX + 4.0f), Y(shoulderY + 14.0f), 5.5f * scale, cAcc);
+    }
+    if (ch.hasPauldrons) {
+        vita2d_draw_fill_circle(X(shX - 8.0f), Y(shoulderY - 2.0f), 9.5f * scale, darken(cAcc, 0.78f));
+        vita2d_draw_fill_circle(X(shX + 8.0f), Y(shoulderY - 2.0f), 9.5f * scale, cAcc);
+    }
     // Belt / Sash
     vita2d_draw_rectangle(std::min(X(hipX - 15.0f), X(hipX + 15.0f)), Y(hipY - 6.0f),
                           30.0f * scale, 8.0f * scale, cAcc);
 
-    // Front leg
+    // Front leg + knee guard + boot
     float fKneeX = (hipX + fFootX) * 0.5f + 9.0f;
     float fKneeY = (hipY + fFootY) * 0.5f - 5.0f;
     drawCapsule(X(hipX + 4.0f), Y(hipY), X(fKneeX), Y(fKneeY), 10.0f * scale, cSec);
     drawCapsule(X(fKneeX), Y(fKneeY), X(fFootX), Y(fFootY - 6.0f), 9.0f * scale, cPrim);
+    vita2d_draw_fill_circle(X(fKneeX), Y(fKneeY), 6.5f * scale, cAcc);
+    vita2d_draw_fill_circle(X(fFootX + 3.0f), Y(fFootY - 4.0f), 8.0f * scale, darken(cAcc, 0.8f));
 
     // Head & character-specific headgear
     float headCx = X(hdX);
@@ -411,20 +457,65 @@ void Renderer::drawFighterModel(const Fighter& f, float baseX, float baseY, int 
             vita2d_draw_fill_circle(headCx, headCy - 2.0f * scale, 15.0f * scale, cPrim);
             vita2d_draw_rectangle(std::min(X(hdX + 2.0f), X(hdX + 16.0f)), headCy - 5.0f * scale, 14.0f * scale, 6.0f * scale, cAcc);
             break;
+        case HeadgearStyle::SOLAR_HELM:
+            vita2d_draw_fill_circle(headCx, headCy - 3.0f * scale, 15.5f * scale, cPrim);
+            drawCapsule(headCx, headCy - 14.0f * scale, headCx - dir * 10.0f * scale, headCy - 30.0f * scale, 3.8f * scale, cAcc);
+            drawCapsule(headCx + dir * 4.0f * scale, headCy - 12.0f * scale, headCx + dir * 12.0f * scale, headCy - 26.0f * scale, 3.0f * scale, cAcc);
+            break;
+        case HeadgearStyle::STARLIGHT_MASK:
+            vita2d_draw_fill_circle(headCx, headCy - 4.0f * scale, 14.5f * scale, cSec);
+            vita2d_draw_rectangle(std::min(X(hdX - 13.0f), X(hdX + 13.0f)), headCy + 2.0f * scale, 26.0f * scale, 12.0f * scale, cPrim);
+            vita2d_draw_fill_circle(headCx + dir * 3.0f * scale, headCy - 16.0f * scale, 5.5f * scale, cAcc);
+            break;
     }
 
     // Glowing eyes
-    vita2d_draw_fill_circle(headCx + dir * 8.0f * scale, headCy - 2.0f * scale, 3.0f * scale, cAcc);
+    vita2d_draw_fill_circle(headCx + dir * 8.0f * scale, headCy - 2.0f * scale, 3.2f * scale, cAcc);
 
-    // Front arm
+    // Front arm + gauntlet
     float fElbX = (shX + fHandX) * 0.5f - 4.0f;
     float fElbY = (shoulderY + fHandY) * 0.5f + 8.0f;
     drawCapsule(X(shX + 4.0f), Y(shoulderY), X(fElbX), Y(fElbY), 8.0f * scale, cSkin);
     drawCapsule(X(fElbX), Y(fElbY), X(fHandX), Y(fHandY), 7.8f * scale, cPrim);
+    vita2d_draw_fill_circle(X(fHandX), Y(fHandY), 8.2f * scale, cAcc);
 
-    // Weapon aura when attacking or holding weapon
-    if (ch.hasWeapon && (f.state == FighterState::ATTACK || scale != 1.0f)) {
-        drawCapsule(X(fHandX), Y(fHandY), X(fHandX + 28.0f), Y(fHandY - 16.0f), 3.2f * scale, cAcc);
+    // Distinct Weapon Models
+    if (ch.weapon != WeaponStyle::NONE && (f.state == FighterState::ATTACK || scale != 1.0f)) {
+        switch (ch.weapon) {
+            case WeaponStyle::KUNAI_SPEAR:
+                drawCapsule(X(fHandX), Y(fHandY), X(fHandX + 34.0f), Y(fHandY - 6.0f), 2.5f * scale, cAcc);
+                break;
+            case WeaponStyle::SHADOW_DAGGERS:
+                drawCapsule(X(fHandX), Y(fHandY), X(fHandX + 26.0f), Y(fHandY - 12.0f), 3.0f * scale, cAcc);
+                drawCapsule(X(bHandX), Y(bHandY), X(bHandX + 22.0f), Y(bHandY + 8.0f), 2.8f * scale, cAcc);
+                break;
+            case WeaponStyle::KATANA:
+            case WeaponStyle::SOLAR_BLADE:
+                drawCapsule(X(fHandX), Y(fHandY), X(fHandX + 42.0f), Y(fHandY - 22.0f), 3.2f * scale, cAcc);
+                break;
+            case WeaponStyle::SOUL_SCYTHE:
+                drawCapsule(X(fHandX - 10.0f), Y(fHandY + 18.0f), X(fHandX + 24.0f), Y(fHandY - 34.0f), 3.0f * scale, cPrim);
+                drawCapsule(X(fHandX + 24.0f), Y(fHandY - 34.0f), X(fHandX + 44.0f), Y(fHandY - 14.0f), 4.0f * scale, cAcc);
+                break;
+            case WeaponStyle::CRESCENT_BLADES:
+                drawCapsule(X(fHandX), Y(fHandY - 12.0f), X(fHandX + 24.0f), Y(fHandY + 4.0f), 3.2f * scale, cAcc);
+                break;
+            default:
+                break;
+        }
+    }
+
+    // Motion Slash / Punch Trail Arc on active attack frames
+    if (f.state == FighterState::ATTACK && scale == 1.0f) {
+        const MoveData& mv = f.currentMove;
+        if (f.stateFrame >= mv.startup && f.stateFrame <= mv.startup + mv.active + 2) {
+            bool isKick = (mv.kind == MoveKind::LIGHT_KICK || mv.kind == MoveKind::HEAVY_KICK ||
+                           mv.kind == MoveKind::CROUCH_KICK_SWEEP || mv.kind == MoveKind::JUMP_KICK);
+            float tx = isKick ? X(fFootX) : X(fHandX);
+            float ty = isKick ? Y(fFootY - 6.0f) : Y(fHandY);
+            vita2d_draw_line(tx - dir * 32.0f, ty - 14.0f, tx + dir * 16.0f, ty, withAlpha(cAcc, 210));
+            vita2d_draw_line(tx - dir * 28.0f, ty + 14.0f, tx + dir * 16.0f, ty, withAlpha(ch.auraColor, 190));
+        }
     }
 
     // Elemental fist glow during Special / Super / Finisher
@@ -477,12 +568,12 @@ void Renderer::drawTitleScreen(const UiState& ui) {
     vita2d_draw_fill_circle(SCREEN_W * 0.5f, 152.0f, 58.0f, rgba(255, 150, 30, 120));
 
     drawTextCenteredShadow(SCREEN_W * 0.5f, 125.0f, rgba(255, 200, 65), 2.35f, "VITA KOMBAT");
-    drawTextCenteredShadow(SCREEN_W * 0.5f, 174.0f, rgba(255, 90, 45), 1.25f, "REALM OF TEN WARRIORS");
+    drawTextCenteredShadow(SCREEN_W * 0.5f, 174.0f, rgba(255, 90, 45), 1.25f, "REALM OF TWELVE WARRIORS");
 
     const char* items[3] = {
         "ENTER TOURNAMENT",
         "TRAINING DOJO",
-        "10 WARRIOR ROSTER"
+        "12 WARRIOR ROSTER"
     };
 
     for (int i = 0; i < 3; ++i) {
@@ -496,73 +587,84 @@ void Renderer::drawTitleScreen(const UiState& ui) {
     }
 
     drawTextCenteredShadow(SCREEN_W * 0.5f, 495.0f, rgba(195, 195, 210), 0.85f,
-                           "Cross (X): Select   |   10 Unique Fighters   |   Specials, Combos & Finishers");
+                           "Cross (X): Select   |   12 Unique Fighters   |   7 Arenas   |   5 Difficulty Levels");
 }
 
 void Renderer::drawModeSelect(const UiState& ui) {
-    drawStageBackdrop(3, ui.frameCount, true);
-    drawTextCenteredShadow(SCREEN_W * 0.5f, 70.0f, rgba(255, 205, 65), 1.7f, "SELECT KOMBAT MODE");
+    drawStageBackdrop(6, ui.frameCount, true);
+    drawTextCenteredShadow(SCREEN_W * 0.5f, 66.0f, rgba(255, 205, 65), 1.7f, "SELECT KOMBAT MODE");
 
-    const char* modes[3] = {"ARCADE LADDER (10 FIGHTERS)", "VS CPU (CUSTOM MATCH)", "TRAINING DOJO"};
+    const char* modes[3] = {"ARCADE LADDER (12 FIGHTERS)", "VS CPU (CUSTOM MATCH)", "TRAINING DOJO"};
     const char* modeDesc[3] = {
-        "Battle through all 10 warriors & defeat Overlord KAAL!",
-        "Pick your fighter, opponent, arena stage, and difficulty.",
+        "Battle through all 12 warriors & conquer the realm!",
+        "Pick your fighter, opponent, 7 arenas, and 5 difficulty levels.",
         "Practice combos, special moves & air juggles with infinite HP."
     };
 
     for (int i = 0; i < 3; ++i) {
         bool sel = (ui.modeSelection == i);
-        float y = 145.0f + i * 86.0f;
-        vita2d_draw_rectangle(170.0f, y, 620.0f, 70.0f, sel ? rgba(175, 28, 22, 230) : rgba(24, 20, 34, 210));
-        drawRectOutline(170.0f, y, 620.0f, 70.0f, 2.5f, sel ? rgba(255, 215, 70) : rgba(85, 80, 105));
-        drawTextShadow(195.0f, y + 28.0f, sel ? rgba(255, 235, 150) : rgba(230, 230, 240), 1.15f, modes[i]);
-        drawTextShadow(195.0f, y + 54.0f, rgba(205, 205, 220), 0.82f, modeDesc[i]);
+        float y = 132.0f + i * 82.0f;
+        vita2d_draw_rectangle(160.0f, y, 640.0f, 68.0f, sel ? rgba(175, 28, 22, 230) : rgba(24, 20, 34, 210));
+        drawRectOutline(160.0f, y, 640.0f, 68.0f, 2.5f, sel ? rgba(255, 215, 70) : rgba(85, 80, 105));
+        drawTextShadow(185.0f, y + 27.0f, sel ? rgba(255, 235, 150) : rgba(230, 230, 240), 1.12f, modes[i]);
+        drawTextShadow(185.0f, y + 52.0f, rgba(205, 205, 220), 0.80f, modeDesc[i]);
     }
 
-    const char* diffNames[3] = {"EASY", "NORMAL", "BRUTAL"};
+    const char* diffNames[DIFFICULTY_COUNT] = {"BEGINNER", "AMATEUR", "SEMI-PRO", "PRO", "LEGENDARY"};
+    const uint32_t diffCols[DIFFICULTY_COUNT] = {
+        rgba(120, 235, 140), rgba(145, 225, 255), rgba(255, 215, 85), rgba(255, 130, 50), rgba(255, 55, 80)
+    };
+    int dIdx = std::max(0, std::min(DIFFICULTY_COUNT - 1, ui.difficultySelection));
     char diffBuf[96];
-    std::snprintf(diffBuf, sizeof(diffBuf), "CPU DIFFICULTY (L / R):  <  %s  >", diffNames[ui.difficultySelection]);
-    vita2d_draw_rectangle(240.0f, 422.0f, 480.0f, 40.0f, rgba(20, 18, 30, 220));
-    drawRectOutline(240.0f, 422.0f, 480.0f, 40.0f, 2.0f, rgba(255, 175, 60));
-    drawTextCenteredShadow(SCREEN_W * 0.5f, 449.0f, rgba(255, 215, 100), 0.95f, diffBuf);
+    std::snprintf(diffBuf, sizeof(diffBuf), "DIFFICULTY (L / R):  <  %s  >", diffNames[dIdx]);
+    vita2d_draw_rectangle(210.0f, 396.0f, 540.0f, 44.0f, rgba(20, 18, 30, 225));
+    drawRectOutline(210.0f, 396.0f, 540.0f, 44.0f, 2.2f, diffCols[dIdx]);
+    drawTextCenteredShadow(SCREEN_W * 0.5f, 425.0f, diffCols[dIdx], 1.02f, diffBuf);
+
+    // 5 difficulty pips
+    for (int d = 0; d < DIFFICULTY_COUNT; ++d) {
+        float px = SCREEN_W * 0.5f - 80.0f + d * 40.0f;
+        vita2d_draw_rectangle(px - 12.0f, 452.0f, 24.0f, 7.0f,
+                              (d <= dIdx) ? diffCols[dIdx] : rgba(55, 50, 68));
+    }
 
     drawTextCenteredShadow(SCREEN_W * 0.5f, 505.0f, rgba(200, 200, 215), 0.85f,
-                           "Cross (X): Confirm   |   Circle (O): Back   |   L / R: Difficulty");
+                           "Cross (X): Confirm   |   Circle (O): Back   |   L / R: 5 Difficulty Levels");
 }
 
 void Renderer::drawCharacterSelect(const UiState& ui) {
     drawStageBackdrop(1, ui.frameCount, true);
-    const char* header = ui.selectingP2 ? "CHOOSE YOUR OPPONENT (P2 CPU)" : "CHOOSE YOUR FIGHTER (10 WARRIORS)";
-    drawTextCenteredShadow(SCREEN_W * 0.5f, 44.0f, rgba(255, 205, 65), 1.4f, header);
+    const char* header = ui.selectingP2 ? "CHOOSE YOUR OPPONENT (P2 CPU)" : "CHOOSE YOUR FIGHTER (12 WARRIORS)";
+    drawTextCenteredShadow(SCREEN_W * 0.5f, 38.0f, rgba(255, 205, 65), 1.35f, header);
 
-    // 2x5 character grid on left/center
+    // 4x3 character grid on left/center (12 warriors)
     for (int i = 0; i < CHARACTER_COUNT; ++i) {
         const CharacterDef& ch = getCharacter(i);
-        int col = i % 5;
-        int row = i / 5;
-        float cx = 44.0f + col * 108.0f;
-        float cy = 78.0f + row * 124.0f;
-        float cw = 98.0f;
-        float chH = 114.0f;
+        int col = i % 4;
+        int row = i / 4;
+        float cx = 36.0f + col * 136.0f;
+        float cy = 58.0f + row * 94.0f;
+        float cw = 126.0f;
+        float chH = 86.0f;
 
         bool isP1 = (ui.p1Select == i);
         bool isP2 = (ui.p2Select == i && ui.modeSelection != 0);
 
         vita2d_draw_rectangle(cx, cy, cw, chH, rgba(20, 18, 30, 225));
-        vita2d_draw_rectangle(cx + 4, cy + 4, cw - 8, chH - 28, darken(ch.primaryColor, 0.35f));
+        vita2d_draw_rectangle(cx + 3, cy + 3, cw - 6, chH - 24, darken(ch.primaryColor, 0.35f));
 
         // Mini fighter preview
-        drawFighterPortrait(i, cx + cw * 0.5f, cy + chH - 22.0f, 0.52f, ui.frameCount);
+        drawFighterPortrait(i, cx + cw * 0.5f, cy + chH - 20.0f, 0.40f, ui.frameCount);
 
-        vita2d_draw_rectangle(cx, cy + chH - 24.0f, cw, 24.0f, rgba(10, 10, 16, 230));
-        drawTextCentered(cx + cw * 0.5f, cy + chH - 6.0f, rgba(245, 245, 250), 0.78f, ch.name);
+        vita2d_draw_rectangle(cx, cy + chH - 21.0f, cw, 21.0f, rgba(10, 10, 16, 232));
+        drawTextCentered(cx + cw * 0.5f, cy + chH - 5.0f, rgba(245, 245, 250), 0.74f, ch.name);
 
         if (isP1) {
             drawRectOutline(cx, cy, cw, chH, 3.0f, rgba(255, 210, 50));
-            drawTextShadow(cx + 5, cy + 18, rgba(255, 220, 60), 0.75f, "P1");
+            drawTextShadow(cx + 5, cy + 16, rgba(255, 220, 60), 0.72f, "P1");
         } else if (isP2) {
             drawRectOutline(cx, cy, cw, chH, 3.0f, rgba(255, 65, 85));
-            drawTextShadow(cx + cw - 26, cy + 18, rgba(255, 90, 110), 0.75f, "CPU");
+            drawTextShadow(cx + cw - 26, cy + 16, rgba(255, 90, 110), 0.72f, "CPU");
         } else {
             drawRectOutline(cx, cy, cw, chH, 1.5f, rgba(90, 85, 115));
         }
@@ -614,30 +716,35 @@ void Renderer::drawCharacterSelect(const UiState& ui) {
 
 void Renderer::drawStageSelect(const UiState& ui) {
     drawStageBackdrop(ui.stageSelect, ui.frameCount, false);
-    vita2d_draw_rectangle(0, 0, SCREEN_W, SCREEN_H, rgba(0, 0, 0, 110));
+    vita2d_draw_rectangle(0, 0, SCREEN_W, SCREEN_H, rgba(0, 0, 0, 100));
 
-    drawTextCenteredShadow(SCREEN_W * 0.5f, 64.0f, rgba(255, 205, 65), 1.6f, "SELECT KOMBAT ARENA");
+    drawTextCenteredShadow(SCREEN_W * 0.5f, 52.0f, rgba(255, 205, 65), 1.55f, "SELECT KOMBAT ARENA (7 MAPS)");
 
     for (int i = 0; i < STAGE_COUNT; ++i) {
         const StageDef& st = getStage(i);
         bool sel = (ui.stageSelect == i);
-        float cx = 64.0f + i * 212.0f;
-        float cy = 140.0f;
-        float cw = 196.0f;
-        float chH = 220.0f;
+        int row = (i < 4) ? 0 : 1;
+        int col = (i < 4) ? i : (i - 4);
+        int rowCount = (row == 0) ? 4 : 3;
+        float cw = 204.0f;
+        float chH = 166.0f;
+        float gap = 16.0f;
+        float startX = (SCREEN_W - (rowCount * cw + (rowCount - 1) * gap)) * 0.5f;
+        float cx = startX + col * (cw + gap);
+        float cy = 88.0f + row * 190.0f;
 
-        vita2d_draw_rectangle(cx, cy, cw, chH, rgba(16, 14, 24, 225));
-        vita2d_draw_rectangle(cx + 8.0f, cy + 8.0f, cw - 16.0f, 125.0f, st.skyBottom);
-        vita2d_draw_rectangle(cx + 8.0f, cy + 98.0f, cw - 16.0f, 35.0f, st.floorColor);
-        vita2d_draw_rectangle(cx + 8.0f, cy + 96.0f, cw - 16.0f, 4.0f, st.accentColor);
+        vita2d_draw_rectangle(cx, cy, cw, chH, rgba(16, 14, 24, 228));
+        vita2d_draw_rectangle(cx + 8.0f, cy + 8.0f, cw - 16.0f, 88.0f, st.skyBottom);
+        vita2d_draw_rectangle(cx + 8.0f, cy + 68.0f, cw - 16.0f, 28.0f, st.floorColor);
+        vita2d_draw_rectangle(cx + 8.0f, cy + 66.0f, cw - 16.0f, 4.0f, st.accentColor);
 
         drawRectOutline(cx, cy, cw, chH, sel ? 3.5f : 1.5f, sel ? rgba(255, 210, 60) : rgba(90, 90, 115));
-        drawTextCenteredShadow(cx + cw * 0.5f, cy + 166.0f, sel ? rgba(255, 230, 120) : rgba(235, 235, 245), 0.90f, st.name);
-        drawTextCenteredShadow(cx + cw * 0.5f, cy + 194.0f, rgba(185, 195, 215), 0.72f, st.subtitle);
+        drawTextCenteredShadow(cx + cw * 0.5f, cy + 124.0f, sel ? rgba(255, 230, 120) : rgba(235, 235, 245), 0.88f, st.name);
+        drawTextCenteredShadow(cx + cw * 0.5f, cy + 148.0f, rgba(185, 195, 215), 0.70f, st.subtitle);
     }
 
-    drawTextCenteredShadow(SCREEN_W * 0.5f, 498.0f, rgba(220, 220, 235), 0.90f,
-                           "Left / Right: Choose Stage   |   Cross (X): Start Kombat   |   Circle (O): Back");
+    drawTextCenteredShadow(SCREEN_W * 0.5f, 502.0f, rgba(220, 220, 235), 0.90f,
+                           "D-Pad / Stick: Choose Arena   |   Cross (X): Start Kombat   |   Circle (O): Back");
 }
 
 void Renderer::drawVsSplash(const UiState& ui) {
@@ -689,9 +796,37 @@ void Renderer::drawMatch(const MatchState& m, int globalFrame) {
                               pool.width, 10.0f, rgba(75, 245, 50, 175));
     }
 
+    // Dash / teleport ghost afterimages
+    for (int i = 0; i < 2; ++i) {
+        if (m.fighters[i].ghostTimer > 0) {
+            const CharacterDef& gch = getCharacter(m.fighters[i].charId);
+            uint8_t ga = static_cast<uint8_t>(m.fighters[i].ghostTimer * 9);
+            float gx = m.fighters[i].ghostX + shakeX;
+            float gy = m.fighters[i].ghostY + shakeY;
+            drawCapsule(gx, gy - 58.0f, gx, gy - 102.0f, 16.0f, withAlpha(gch.auraColor, ga));
+            vita2d_draw_fill_circle(gx, gy - 124.0f, 13.0f, withAlpha(gch.accentColor, ga));
+        }
+    }
+
     // Fighters
     drawFighterModel(m.fighters[0], m.fighters[0].x + shakeX, m.fighters[0].y + shakeY, globalFrame, 1.0f);
     drawFighterModel(m.fighters[1], m.fighters[1].x + shakeX, m.fighters[1].y + shakeY, globalFrame, 1.0f);
+
+    // Shockwave impact rings
+    for (const auto& sw : m.shockwaves) {
+        if (!sw.active) continue;
+        uint8_t a = static_cast<uint8_t>(210.0f * (static_cast<float>(sw.life) / static_cast<float>(sw.maxLife)));
+        uint32_t col = withAlpha(sw.color, a);
+        float sx = sw.x + shakeX;
+        float sy = sw.y + shakeY;
+        float r = sw.radius;
+        for (int seg = 0; seg < 12; ++seg) {
+            float a0 = (seg * 6.28318f) / 12.0f;
+            float a1 = ((seg + 1) * 6.28318f) / 12.0f;
+            vita2d_draw_line(sx + std::cos(a0) * r, sy + std::sin(a0) * r,
+                             sx + std::cos(a1) * r, sy + std::sin(a1) * r, col);
+        }
+    }
 
     // Projectiles & Special FX
     for (const auto& pr : m.projectiles) {
@@ -723,14 +858,17 @@ void Renderer::drawMatch(const MatchState& m, int globalFrame) {
     const CharacterDef& c1 = getCharacter(m.fighters[0].charId);
     const CharacterDef& c2 = getCharacter(m.fighters[1].charId);
 
-    // Health bar frames
+    // Health bar frames with trailing delayed-damage bar
     float barW = 376.0f;
     float barH = 24.0f;
     float p1Ratio = clampf(static_cast<float>(m.fighters[0].hp) / static_cast<float>(m.fighters[0].maxHp), 0.0f, 1.0f);
+    float p1Trail = clampf(m.fighters[0].trailHp / static_cast<float>(m.fighters[0].maxHp), p1Ratio, 1.0f);
     float p2Ratio = clampf(static_cast<float>(m.fighters[1].hp) / static_cast<float>(m.fighters[1].maxHp), 0.0f, 1.0f);
+    float p2Trail = clampf(m.fighters[1].trailHp / static_cast<float>(m.fighters[1].maxHp), p2Ratio, 1.0f);
 
     // P1 Bar (drains right-to-left)
     vita2d_draw_rectangle(36.0f, 26.0f, barW, barH, rgba(35, 10, 14, 235));
+    vita2d_draw_rectangle(36.0f + barW * (1.0f - p1Trail), 26.0f, barW * p1Trail, barH, rgba(255, 225, 130, 220));
     vita2d_draw_rectangle(36.0f + barW * (1.0f - p1Ratio), 26.0f, barW * p1Ratio, barH,
                           (p1Ratio > 0.25f) ? rgba(215, 40, 35) : rgba(255, 110, 25));
     drawRectOutline(36.0f, 26.0f, barW, barH, 2.0f, rgba(245, 200, 75));
@@ -739,6 +877,7 @@ void Renderer::drawMatch(const MatchState& m, int globalFrame) {
     // P2 Bar (drains left-to-right)
     float p2X = SCREEN_W - 36.0f - barW;
     vita2d_draw_rectangle(p2X, 26.0f, barW, barH, rgba(35, 10, 14, 235));
+    vita2d_draw_rectangle(p2X, 26.0f, barW * p2Trail, barH, rgba(255, 225, 130, 220));
     vita2d_draw_rectangle(p2X, 26.0f, barW * p2Ratio, barH,
                           (p2Ratio > 0.25f) ? rgba(215, 40, 35) : rgba(255, 110, 25));
     drawRectOutline(p2X, 26.0f, barW, barH, 2.0f, rgba(245, 200, 75));
@@ -902,7 +1041,7 @@ void Renderer::drawArcadeVictoryScreen(const UiState& ui) {
 
     drawTextCenteredShadow(SCREEN_W * 0.5f, 88.0f, rgba(255, 215, 65), 1.85f, "SUPREME CHAMPION!");
     char buf[96];
-    std::snprintf(buf, sizeof(buf), "%s CONQUERED ALL 10 REALMS!", ch.name);
+    std::snprintf(buf, sizeof(buf), "%s CONQUERED ALL 12 REALMS!", ch.name);
     drawTextCenteredShadow(SCREEN_W * 0.5f, 134.0f, ch.accentColor, 1.25f, buf);
     drawTextCenteredShadow(SCREEN_W * 0.5f, 430.0f, rgba(230, 230, 240), 0.95f, ch.quote);
     drawTextCenteredShadow(SCREEN_W * 0.5f, 494.0f, rgba(255, 225, 120), 0.95f, "Press Cross (X) or START to Return to Title");

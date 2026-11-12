@@ -22,8 +22,9 @@ constexpr float GRAVITY = 0.88f;
 constexpr int MAX_HP = 1000;
 constexpr int MAX_METER = 100;
 constexpr int ROUND_TIME_SEC = 99;
-constexpr int CHARACTER_COUNT = 10;
-constexpr int STAGE_COUNT = 4;
+constexpr int CHARACTER_COUNT = 12;
+constexpr int STAGE_COUNT = 7;
+constexpr int DIFFICULTY_COUNT = 5;
 
 enum class GameScreen {
     TITLE,
@@ -45,9 +46,11 @@ enum class GameMode {
 };
 
 enum class Difficulty {
-    EASY = 0,
-    NORMAL = 1,
-    BRUTAL = 2
+    BEGINNER = 0,
+    AMATEUR = 1,
+    SEMI_PRO = 2,
+    PRO = 3,
+    LEGENDARY = 4
 };
 
 enum class FighterState {
@@ -108,7 +111,11 @@ enum class SpecialEffectType {
     CRIMSON_DRAIN,         // Maya: Lifesteal blood orb
     SCARLET_SPIKE,         // Maya: Ground blood spike
     SOUL_PILLAR,           // Kaal: Erupting pillar under opponent
-    REAPER_SCYTHE          // Kaal: Returning scythe projectile
+    REAPER_SCYTHE,         // Kaal: Returning scythe projectile
+    SOLAR_FLARE,           // Surya: Radiant sun orb (burn)
+    RADIANT_DIVE,          // Surya: Golden blade rush
+    ASTRAL_SHURIKEN,       // Tara: Fast spinning star projectile
+    VOID_BLINK             // Tara: Cosmic blink slash behind opponent
 };
 
 enum class HeadgearStyle {
@@ -121,15 +128,27 @@ enum class HeadgearStyle {
     VIPER_CROWN,
     CYBER_VISOR,
     BLOOD_TIARA,
-    SKULL_HOOD
+    SKULL_HOOD,
+    SOLAR_HELM,
+    STARLIGHT_MASK
+};
+
+enum class WeaponStyle {
+    NONE,
+    KUNAI_SPEAR,
+    SHADOW_DAGGERS,
+    KATANA,
+    SOUL_SCYTHE,
+    SOLAR_BLADE,
+    CRESCENT_BLADES
 };
 
 struct MoveData {
     MoveKind kind = MoveKind::NONE;
     const char* name = "";
-    int startup = 4;       // frames before active
-    int active = 4;        // active hitbox frames
-    int recovery = 10;     // recovery frames after active
+    int startup = 4;
+    int active = 4;
+    int recovery = 10;
     int damage = 50;
     int chipDamage = 8;
     int hitstun = 16;
@@ -163,13 +182,11 @@ struct CharacterDef {
     const char* finisherName;
     const char* quote;
 
-    // Gameplay attributes
     float walkSpeed;
     float jumpVel;
     float damageMult;
     int maxHpBonus;
 
-    // Visual appearance (ABGR colors via RGBA8 macro at runtime or packed RGBA)
     uint32_t primaryColor;
     uint32_t secondaryColor;
     uint32_t skinColor;
@@ -177,7 +194,9 @@ struct CharacterDef {
     uint32_t auraColor;
     HeadgearStyle headgear;
     bool hasCape;
-    bool hasWeapon;
+    bool hasScarf;
+    bool hasPauldrons;
+    WeaponStyle weapon;
     bool isCyber;
 
     SpecialEffectType special1Effect;
@@ -187,7 +206,7 @@ struct CharacterDef {
 struct Projectile {
     bool active = false;
     bool hasHit = false;
-    int ownerIndex = 0; // 0 = P1, 1 = P2
+    int ownerIndex = 0;
     float x = 0.0f;
     float y = 0.0f;
     float vx = 0.0f;
@@ -224,17 +243,28 @@ struct Particle {
     bool gravity = false;
 };
 
+struct Shockwave {
+    bool active = false;
+    float x = 0.0f;
+    float y = 0.0f;
+    float radius = 10.0f;
+    float maxRadius = 80.0f;
+    int life = 16;
+    int maxLife = 16;
+    uint32_t color = 0xFFFFFFFF;
+};
+
 struct AcidPool {
     bool active = false;
     int ownerIndex = 0;
     float x = 0.0f;
     float width = 90.0f;
     int timer = 0;
-    uint32_t color = 0xFF44FF44;
+    uint32_t color = rgba(75, 245, 50);
 };
 
 struct Fighter {
-    int slot = 0;          // 0 = P1, 1 = P2
+    int slot = 0;
     int charId = 0;
     bool isCpu = false;
 
@@ -242,11 +272,12 @@ struct Fighter {
     float y = GROUND_Y;
     float vx = 0.0f;
     float vy = 0.0f;
-    int facing = 1;        // +1 facing right, -1 facing left
+    int facing = 1;
 
     int hp = MAX_HP;
+    float trailHp = static_cast<float>(MAX_HP);
     int maxHp = MAX_HP;
-    int meter = 25;        // 0..100
+    int meter = 25;
     int roundsWon = 0;
 
     FighterState state = FighterState::IDLE;
@@ -258,23 +289,25 @@ struct Fighter {
     int invulnFrames = 0;
     int flashFrames = 0;
 
+    float ghostX = 260.0f;
+    float ghostY = GROUND_Y;
+    int ghostTimer = 0;
+
     MoveData currentMove;
     bool moveHasHit = false;
     bool comboCancelled = false;
-    int comboHitCount = 0;     // hits currently suffered by THIS fighter (display on attacker side)
+    int comboHitCount = 0;
     int comboDamageTaken = 0;
     int comboDisplayTimer = 0;
     int maxComboLanded = 0;
-    int chainStage = 0;        // 0=none, 1=light, 2=heavy
+    int chainStage = 0;
 
-    // Input history for motion detection
     uint32_t prevButtons = 0;
     int motionDirHistory[16] = {0};
     int motionTimer = 0;
     int lastTapDir = 0;
     int doubleTapTimer = 0;
 
-    // AI timers
     int aiThinkTimer = 0;
     int aiActionFrames = 0;
     int aiCurrentIntent = 0;
@@ -317,7 +350,7 @@ struct StageDef {
     uint32_t skyBottom;
     uint32_t floorColor;
     uint32_t accentColor;
-    int weatherType; // 0=embers, 1=snow, 2=rain+lightning, 3=spectral mist
+    int weatherType; // 0=embers, 1=snow, 2=rain+lightning, 3=spectral mist, 4=sakura/petals, 5=sparks, 6=sunbeams
 };
 
 } // namespace vk

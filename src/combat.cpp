@@ -58,6 +58,7 @@ void resetFighterForRound(Fighter& f, int slot, int charId, bool isCpu) {
     f.facing = (slot == 0) ? 1 : -1;
     f.maxHp = MAX_HP + ch.maxHpBonus;
     f.hp = f.maxHp;
+    f.trailHp = static_cast<float>(f.maxHp);
     f.state = FighterState::IDLE;
     f.stateFrame = 0;
     f.stunFrames = 0;
@@ -66,6 +67,9 @@ void resetFighterForRound(Fighter& f, int slot, int charId, bool isCpu) {
     f.poisonFrames = 0;
     f.invulnFrames = 0;
     f.flashFrames = 0;
+    f.ghostX = f.x;
+    f.ghostY = f.y;
+    f.ghostTimer = 0;
     f.currentMove = MoveData{};
     f.moveHasHit = false;
     f.comboCancelled = false;
@@ -306,6 +310,36 @@ void executeSpecialPayload(MatchState& m, Fighter& attacker, Fighter& defender, 
         case SpecialEffectType::REAPER_SCYTHE:
             addProj(attacker.x + attacker.facing * 45.0f, attacker.y - 76.0f, attacker.facing * 10.5f, 0.0f, 22.0f, 95, false, false, false, false, true, false);
             break;
+
+        case SpecialEffectType::SOLAR_FLARE:
+            addProj(attacker.x + attacker.facing * 46.0f, attacker.y - 80.0f, attacker.facing * 9.6f, 0.0f, 22.0f, 102, false, true, false, false, false, false);
+            spawnShockwave(m, attacker.x + attacker.facing * 46.0f, attacker.y - 80.0f, 55.0f, ch.accentColor);
+            break;
+
+        case SpecialEffectType::RADIANT_DIVE:
+            attacker.ghostX = attacker.x;
+            attacker.ghostY = attacker.y;
+            attacker.ghostTimer = 14;
+            attacker.vx = attacker.facing * 13.5f;
+            spawnParticles(m, attacker.x, attacker.y - 70.0f, 18, ch.accentColor, 6.0f, false);
+            break;
+
+        case SpecialEffectType::ASTRAL_SHURIKEN:
+            addProj(attacker.x + attacker.facing * 42.0f, attacker.y - 80.0f, attacker.facing * 13.4f, 0.0f, 17.0f, 90, false, false, false, false, false, false);
+            break;
+
+        case SpecialEffectType::VOID_BLINK:
+            attacker.ghostX = attacker.x;
+            attacker.ghostY = attacker.y;
+            attacker.ghostTimer = 18;
+            spawnParticles(m, attacker.x, attacker.y - 70.0f, 18, ch.auraColor, 6.0f, false);
+            spawnShockwave(m, attacker.x, attacker.y - 70.0f, 48.0f, ch.auraColor);
+            attacker.x = clampf(defender.x - defender.facing * 68.0f, STAGE_LEFT, STAGE_RIGHT);
+            attacker.facing = (defender.x >= attacker.x) ? 1 : -1;
+            attacker.invulnFrames = 10;
+            spawnParticles(m, attacker.x, attacker.y - 70.0f, 18, ch.accentColor, 6.0f, false);
+            spawnShockwave(m, attacker.x, attacker.y - 70.0f, 55.0f, ch.accentColor);
+            break;
     }
 }
 
@@ -441,6 +475,7 @@ void applyHitToDefender(MatchState& m, Fighter& attacker, Fighter& defender,
         m.screenShakeFrames = 10;
         m.screenShakeMag = (launchY <= -13.0f) ? 8.5f : 5.0f;
         audio.play(SoundId::HIT_HEAVY);
+        spawnShockwave(m, defender.x, defender.y - 78.0f, (launchY <= -13.0f) ? 88.0f : 62.0f, attCh.accentColor);
     } else {
         audio.play(SoundId::HIT_LIGHT);
     }
@@ -457,37 +492,48 @@ InputState computeCpuInput(const MatchState& m, Fighter& cpu, const Fighter& pla
     float dist = std::abs(player.x - cpu.x);
     bool playerRight = (player.x > cpu.x);
 
+    // 5 Difficulty tuning tables: Beginner, Amateur, Semi-Pro, Pro, Legendary
+    static const int kAggro[DIFFICULTY_COUNT]     = { 20, 42, 65, 84, 96 };
+    static const int kBlockChance[DIFFICULTY_COUNT] = { 14, 34, 56, 78, 92 };
+    static const int kThinkMin[DIFFICULTY_COUNT]  = { 24, 16, 11,  7,  4 };
+    static const int kThinkMax[DIFFICULTY_COUNT]  = { 36, 26, 19, 13,  8 };
+
+    int dIdx = clampf(static_cast<float>(m.difficulty), 0.0f, static_cast<float>(DIFFICULTY_COUNT - 1));
+    int aggro = kAggro[dIdx];
+    int blockPct = kBlockChance[dIdx];
+
     if (cpu.aiThinkTimer > 0) {
         cpu.aiThinkTimer--;
     } else {
-        int aggro = (m.difficulty == Difficulty::EASY) ? 35 :
-                    (m.difficulty == Difficulty::NORMAL) ? 62 : 86;
         int roll = randRange(0, 99);
 
         if (m.finishHimActive && m.fighters[0].state == FighterState::DIZZY_FINISH_HIM) {
-            if (dist > 140.0f) cpu.aiCurrentIntent = 1; // move in
-            else cpu.aiCurrentIntent = 8; // finisher
-            cpu.aiThinkTimer = 10;
-        } else if (player.state == FighterState::ATTACK && dist < 130.0f && roll < aggro) {
+            if (dist > 140.0f) cpu.aiCurrentIntent = 1;
+            else cpu.aiCurrentIntent = 8;
+            cpu.aiThinkTimer = 8;
+        } else if (player.state == FighterState::ATTACK && dist < 135.0f && roll < blockPct) {
             cpu.aiCurrentIntent = 3; // block
-            cpu.aiThinkTimer = 14;
+            cpu.aiThinkTimer = randRange(10, 16);
+        } else if (player.y < GROUND_Y - 40.0f && dist < 115.0f && dIdx >= 2 && roll < aggro) {
+            cpu.aiCurrentIntent = 7; // anti-air uppercut!
+            cpu.aiThinkTimer = kThinkMin[dIdx];
         } else if (dist > 250.0f) {
             if (roll < aggro / 2) cpu.aiCurrentIntent = 5; // special projectile
             else cpu.aiCurrentIntent = 1; // walk forward
-            cpu.aiThinkTimer = randRange(12, 24);
+            cpu.aiThinkTimer = randRange(kThinkMin[dIdx], kThinkMax[dIdx]);
         } else if (dist > 105.0f) {
-            if (roll < 30) cpu.aiCurrentIntent = 1;
-            else if (roll < 55) cpu.aiCurrentIntent = 6; // dash or special 2
-            else if (roll < 75) cpu.aiCurrentIntent = 5;
+            if (roll < 28) cpu.aiCurrentIntent = 1;
+            else if (roll < 55 && dIdx >= 1) cpu.aiCurrentIntent = 6; // dash or special 2
+            else if (roll < 76) cpu.aiCurrentIntent = 5;
             else cpu.aiCurrentIntent = 2; // jump in
-            cpu.aiThinkTimer = randRange(10, 20);
+            cpu.aiThinkTimer = randRange(kThinkMin[dIdx], kThinkMax[dIdx]);
         } else {
-            if (roll < 25) cpu.aiCurrentIntent = 4; // quick combo
-            else if (roll < 45) cpu.aiCurrentIntent = 7; // uppercut / sweep
-            else if (roll < 62 && cpu.meter >= 100) cpu.aiCurrentIntent = 9; // super
-            else if (roll < 80) cpu.aiCurrentIntent = 5; // special
+            if (roll < 28) cpu.aiCurrentIntent = 4; // combo chain
+            else if (roll < 46) cpu.aiCurrentIntent = 7; // uppercut / sweep
+            else if (roll < 64 && cpu.meter >= 100 && dIdx >= 1) cpu.aiCurrentIntent = 9; // super
+            else if (roll < 82) cpu.aiCurrentIntent = 5; // special
             else cpu.aiCurrentIntent = 10; // backstep
-            cpu.aiThinkTimer = randRange(8, 16);
+            cpu.aiThinkTimer = randRange(kThinkMin[dIdx], kThinkMax[dIdx]);
         }
     }
 
@@ -500,20 +546,24 @@ InputState computeCpuInput(const MatchState& m, Fighter& cpu, const Fighter& pla
             in.up = true;
             if (playerRight) in.right = true;
             else in.left = true;
-            if (dist < 140.0f && (cpu.stateFrame % 12 == 0)) in.crossPressed = true;
+            if (dist < 140.0f && (cpu.stateFrame % 10 == 0)) in.crossPressed = true;
             break;
         case 3: // block
             in.lTrigger = true;
-            if (player.currentMove.isLow) in.down = true;
+            if (player.currentMove.isLow && dIdx >= 2) in.down = true;
             break;
-        case 4: // combo chain
+        case 4: // combo chain scaled by difficulty
             if (cpu.state != FighterState::ATTACK) {
                 in.squarePressed = true;
-            } else if (cpu.stateFrame == 6) {
+            } else if (cpu.stateFrame == 6 && dIdx >= 1) {
                 in.trianglePressed = true;
-            } else if (cpu.stateFrame == 13 && m.difficulty != Difficulty::EASY) {
+            } else if (cpu.stateFrame == 13 && dIdx >= 2) {
                 in.rTrigger = true;
                 in.squarePressed = true;
+            } else if (cpu.stateFrame == 14 && dIdx >= 4 && cpu.meter >= 100) {
+                in.lTrigger = true;
+                in.rTrigger = true;
+                in.lPressed = true;
             }
             break;
         case 5: // special 1
@@ -561,6 +611,12 @@ void updateFighterControl(MatchState& m, Fighter& f, Fighter& opp, const InputSt
     if (f.flashFrames > 0) f.flashFrames--;
     if (f.comboDisplayTimer > 0) f.comboDisplayTimer--;
     if (f.doubleTapTimer > 0) f.doubleTapTimer--;
+    if (f.ghostTimer > 0) f.ghostTimer--;
+    if (f.trailHp > static_cast<float>(f.hp)) {
+        f.trailHp = std::max(static_cast<float>(f.hp), f.trailHp - 4.5f);
+    } else {
+        f.trailHp = static_cast<float>(f.hp);
+    }
 
     // Status damage over time
     if (f.burnFrames > 0) {
@@ -704,7 +760,9 @@ void updateFighterControl(MatchState& m, Fighter& f, Fighter& opp, const InputSt
                                    mv.specialType != SpecialEffectType::CRIMSON_DRAIN &&
                                    mv.specialType != SpecialEffectType::SCARLET_SPIKE &&
                                    mv.specialType != SpecialEffectType::SOUL_PILLAR &&
-                                   mv.specialType != SpecialEffectType::REAPER_SCYTHE);
+                                   mv.specialType != SpecialEffectType::REAPER_SCYTHE &&
+                                   mv.specialType != SpecialEffectType::SOLAR_FLARE &&
+                                   mv.specialType != SpecialEffectType::ASTRAL_SHURIKEN);
 
             if ((mv.kind != MoveKind::SPECIAL_1 && mv.kind != MoveKind::SPECIAL_2) || isMeleeSpecial) {
                 float hx, hy, hw, hh;
@@ -894,6 +952,9 @@ void updateFighterControl(MatchState& m, Fighter& f, Fighter& opp, const InputSt
     // Dash with R + Direction or Double-Tap
     if (in.rPressed && moveHoriz != 0) {
         bool fwd = (moveHoriz * f.facing > 0);
+        f.ghostX = f.x;
+        f.ghostY = f.y;
+        f.ghostTimer = 10;
         f.state = fwd ? FighterState::DASH_FWD : FighterState::DASH_BACK;
         f.stateFrame = 0;
         f.vx = moveHoriz * 11.5f;
@@ -904,6 +965,9 @@ void updateFighterControl(MatchState& m, Fighter& f, Fighter& opp, const InputSt
         int tap = in.rightPressed ? 1 : -1;
         if (f.lastTapDir == tap && f.doubleTapTimer > 0) {
             bool fwd = (tap * f.facing > 0);
+            f.ghostX = f.x;
+            f.ghostY = f.y;
+            f.ghostTimer = 10;
             f.state = fwd ? FighterState::DASH_FWD : FighterState::DASH_BACK;
             f.stateFrame = 0;
             f.vx = tap * 11.5f;
@@ -939,6 +1003,20 @@ void updateFighterControl(MatchState& m, Fighter& f, Fighter& opp, const InputSt
 }
 
 } // namespace
+
+void spawnShockwave(MatchState& m, float x, float y, float maxRadius, uint32_t color) {
+    if (m.shockwaves.size() >= 16) return;
+    Shockwave s;
+    s.active = true;
+    s.x = x;
+    s.y = y;
+    s.radius = 12.0f;
+    s.maxRadius = maxRadius;
+    s.maxLife = 16;
+    s.life = 16;
+    s.color = color;
+    m.shockwaves.push_back(s);
+}
 
 void spawnParticles(MatchState& m, float x, float y, int count, uint32_t color, float speed, bool gravity) {
     for (int i = 0; i < count; ++i) {
@@ -993,6 +1071,7 @@ void startRound(MatchState& m) {
 
     m.projectiles.clear();
     m.particles.clear();
+    m.shockwaves.clear();
     m.acidPools.clear();
     m.roundTimerFrames = ROUND_TIME_SEC * 60;
     m.introTimer = (m.mode == GameMode::TRAINING) ? 30 : 105;
@@ -1039,6 +1118,18 @@ void updateMatch(MatchState& m, const InputState& p1Input, AudioEngine& audio) {
     m.particles.erase(
         std::remove_if(m.particles.begin(), m.particles.end(), [](const Particle& p) { return !p.active; }),
         m.particles.end()
+    );
+
+    for (auto& sw : m.shockwaves) {
+        if (!sw.active) continue;
+        sw.life--;
+        float progress = 1.0f - (static_cast<float>(sw.life) / static_cast<float>(sw.maxLife));
+        sw.radius = 12.0f + (sw.maxRadius - 12.0f) * progress;
+        if (sw.life <= 0) sw.active = false;
+    }
+    m.shockwaves.erase(
+        std::remove_if(m.shockwaves.begin(), m.shockwaves.end(), [](const Shockwave& s) { return !s.active; }),
+        m.shockwaves.end()
     );
 
     if (m.hitstopFrames > 0) {

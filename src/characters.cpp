@@ -15,7 +15,7 @@ static const CharacterDef kCharacters[CHARACTER_COUNT] = {
         4.4f, -15.6f, 1.04f, 0,
         rgba(235, 130, 20), rgba(35, 28, 30), rgba(225, 180, 145),
         rgba(255, 210, 60), rgba(255, 95, 15),
-        HeadgearStyle::NINJA_COWL, false, true, false,
+        HeadgearStyle::NINJA_COWL, false, true, true, WeaponStyle::KUNAI_SPEAR, false,
         SpecialEffectType::PROJECTILE_BURN, SpecialEffectType::FLAME_UPPERCUT
     },
     {
@@ -29,7 +29,7 @@ static const CharacterDef kCharacters[CHARACTER_COUNT] = {
         4.1f, -15.2f, 1.00f, 30,
         rgba(35, 165, 235), rgba(22, 32, 48), rgba(210, 195, 185),
         rgba(145, 240, 255), rgba(80, 215, 255),
-        HeadgearStyle::CRYO_MASK, false, false, false,
+        HeadgearStyle::CRYO_MASK, false, true, true, WeaponStyle::NONE, false,
         SpecialEffectType::FREEZE_BLAST, SpecialEffectType::ICE_SLIDE
     },
     {
@@ -43,7 +43,7 @@ static const CharacterDef kCharacters[CHARACTER_COUNT] = {
         4.5f, -15.8f, 1.02f, 0,
         rgba(235, 235, 245), rgba(30, 55, 145), rgba(220, 185, 155),
         rgba(120, 215, 255), rgba(95, 185, 255),
-        HeadgearStyle::THUNDER_HAT, true, false, false,
+        HeadgearStyle::THUNDER_HAT, true, false, true, WeaponStyle::NONE, false,
         SpecialEffectType::VOLT_BOLT, SpecialEffectType::LIGHTNING_TELEPORT
     },
     {
@@ -57,7 +57,7 @@ static const CharacterDef kCharacters[CHARACTER_COUNT] = {
         4.7f, -16.0f, 0.98f, -20,
         rgba(45, 42, 60), rgba(18, 16, 24), rgba(135, 130, 150),
         rgba(185, 70, 255), rgba(150, 40, 230),
-        HeadgearStyle::WRAITH_HOOD, true, true, false,
+        HeadgearStyle::WRAITH_HOOD, true, true, false, WeaponStyle::SHADOW_DAGGERS, false,
         SpecialEffectType::SHADOW_CLONE, SpecialEffectType::PHANTOM_SLASH
     },
     {
@@ -71,7 +71,7 @@ static const CharacterDef kCharacters[CHARACTER_COUNT] = {
         3.4f, -14.0f, 1.18f, 140,
         rgba(175, 110, 45), rgba(58, 42, 30), rgba(195, 145, 105),
         rgba(255, 175, 65), rgba(225, 135, 40),
-        HeadgearStyle::TITAN_HORNS, false, false, false,
+        HeadgearStyle::TITAN_HORNS, false, false, true, WeaponStyle::NONE, false,
         SpecialEffectType::SEISMIC_SLAM, SpecialEffectType::TITAN_CHARGE
     },
     {
@@ -85,7 +85,7 @@ static const CharacterDef kCharacters[CHARACTER_COUNT] = {
         4.6f, -16.2f, 1.00f, 0,
         rgba(45, 175, 130), rgba(24, 48, 52), rgba(222, 186, 155),
         rgba(145, 255, 210), rgba(90, 245, 185),
-        HeadgearStyle::RONIN_KABUTO, false, true, false,
+        HeadgearStyle::RONIN_KABUTO, false, true, true, WeaponStyle::KATANA, false,
         SpecialEffectType::TEMPEST_TORNADO, SpecialEffectType::GALE_DASH
     },
     {
@@ -99,7 +99,7 @@ static const CharacterDef kCharacters[CHARACTER_COUNT] = {
         4.5f, -15.8f, 0.96f, -10,
         rgba(75, 200, 45), rgba(24, 42, 24), rgba(165, 205, 155),
         rgba(180, 255, 50), rgba(95, 245, 55),
-        HeadgearStyle::VIPER_CROWN, false, false, false,
+        HeadgearStyle::VIPER_CROWN, false, true, false, WeaponStyle::NONE, false,
         SpecialEffectType::ACID_SPIT, SpecialEffectType::VIPER_LUNGE
     },
     {
@@ -113,7 +113,7 @@ static const CharacterDef kCharacters[CHARACTER_COUNT] = {
         3.9f, -14.8f, 1.08f, 80,
         rgba(155, 165, 180), rgba(45, 50, 62), rgba(145, 150, 160),
         rgba(255, 55, 65), rgba(255, 40, 55),
-        HeadgearStyle::CYBER_VISOR, false, false, true,
+        HeadgearStyle::CYBER_VISOR, false, false, true, WeaponStyle::NONE, true,
         SpecialEffectType::PLASMA_BEAM, SpecialEffectType::ROCKET_GAUNTLET
     },
     {
@@ -127,7 +127,7 @@ static const CharacterDef kCharacters[CHARACTER_COUNT] = {
         4.2f, -15.4f, 0.98f, 10,
         rgba(195, 25, 55), rgba(45, 14, 24), rgba(225, 180, 185),
         rgba(255, 90, 130), rgba(235, 30, 75),
-        HeadgearStyle::BLOOD_TIARA, true, false, false,
+        HeadgearStyle::BLOOD_TIARA, true, false, false, WeaponStyle::NONE, false,
         SpecialEffectType::CRIMSON_DRAIN, SpecialEffectType::SCARLET_SPIKE
     },
     {
@@ -141,8 +141,36 @@ static const CharacterDef kCharacters[CHARACTER_COUNT] = {
         4.1f, -15.4f, 1.10f, 60,
         rgba(120, 45, 195), rgba(22, 14, 34), rgba(175, 165, 190),
         rgba(255, 195, 50), rgba(175, 70, 255),
-        HeadgearStyle::SKULL_HOOD, true, true, false,
+        HeadgearStyle::SKULL_HOOD, true, false, true, WeaponStyle::SOUL_SCYTHE, false,
         SpecialEffectType::SOUL_PILLAR, SpecialEffectType::REAPER_SCYTHE
+    },
+    {
+        10, "SURYA", "SOLAR PALADIN", "Radiant Sun Blade",
+        "SOLAR FLARE", "R + Square  (or D, F + Square)",
+        "Unleashes a blazing sun orb that burns foes!",
+        "RADIANT DIVE", "R + Triangle (or D, B + Triangle)",
+        "Armored golden blade charge that breaks defenses.",
+        "SUPERNOVA JUDGMENT", "SOLAR ANNIHILATION",
+        "Kneel before the blinding dawn!",
+        4.2f, -15.2f, 1.06f, 50,
+        rgba(245, 190, 35), rgba(125, 40, 20), rgba(225, 185, 150),
+        rgba(255, 245, 140), rgba(255, 195, 40),
+        HeadgearStyle::SOLAR_HELM, true, false, true, WeaponStyle::SOLAR_BLADE, false,
+        SpecialEffectType::SOLAR_FLARE, SpecialEffectType::RADIANT_DIVE
+    },
+    {
+        11, "TARA", "STARLIGHT PHANTOM", "Astral Twin-Blade",
+        "ASTRAL SHURIKEN", "R + Square  (or D, F + Square)",
+        "Hurls high-velocity spinning cosmic star blades!",
+        "VOID BLINK", "R + Triangle (or D, B + Triangle)",
+        "Warps behind opponent for a sudden astral slash.",
+        "GALAXY METEOR BARRAGE", "CELESTIAL OBLITERATION",
+        "Written in the stars... your defeat.",
+        4.8f, -16.2f, 0.99f, -15,
+        rgba(85, 110, 245), rgba(20, 22, 58), rgba(215, 200, 230),
+        rgba(145, 235, 255), rgba(170, 120, 255),
+        HeadgearStyle::STARLIGHT_MASK, false, true, false, WeaponStyle::CRESCENT_BLADES, false,
+        SpecialEffectType::ASTRAL_SHURIKEN, SpecialEffectType::VOID_BLINK
     }
 };
 
@@ -170,6 +198,24 @@ static const StageDef kStages[STAGE_COUNT] = {
         "app0:assets/stages/stage_nether.png",
         rgba(22, 8, 34), rgba(66, 20, 82), rgba(34, 24, 42), rgba(205, 85, 255),
         3
+    },
+    {
+        4, "CRIMSON DOJO", "Blood Moon Courtyard",
+        "app0:assets/stages/stage_dojo.png",
+        rgba(34, 8, 14), rgba(95, 18, 28), rgba(44, 26, 24), rgba(255, 85, 95),
+        4
+    },
+    {
+        5, "CYBER FOUNDRY", "Tekunin Core of Loha",
+        "app0:assets/stages/stage_cyber.png",
+        rgba(12, 16, 28), rgba(28, 36, 56), rgba(38, 42, 50), rgba(255, 60, 75),
+        5
+    },
+    {
+        6, "SOLAR CITADEL", "Sky Temple of Surya",
+        "app0:assets/stages/stage_solar.png",
+        rgba(36, 22, 48), rgba(135, 72, 28), rgba(66, 50, 34), rgba(255, 215, 75),
+        6
     }
 };
 
@@ -310,11 +356,13 @@ MoveData getMoveData(int charId, MoveKind kind) {
             } else if (m.specialType == SpecialEffectType::ICE_SLIDE) {
                 m.isLow = true; m.knocksDown = true; m.offsetY = -36.0f; m.reachX = 112.0f;
             } else if (m.specialType == SpecialEffectType::TITAN_CHARGE ||
-                       m.specialType == SpecialEffectType::ROCKET_GAUNTLET) {
+                       m.specialType == SpecialEffectType::ROCKET_GAUNTLET ||
+                       m.specialType == SpecialEffectType::RADIANT_DIVE) {
                 m.hasArmor = true; m.knocksDown = true; m.pushbackX = 42.0f;
             } else if (m.specialType == SpecialEffectType::PHANTOM_SLASH ||
                        m.specialType == SpecialEffectType::GALE_DASH ||
-                       m.specialType == SpecialEffectType::VIPER_LUNGE) {
+                       m.specialType == SpecialEffectType::VIPER_LUNGE ||
+                       m.specialType == SpecialEffectType::VOID_BLINK) {
                 m.launchY = -7.0f; m.reachX = 108.0f;
             }
             break;
@@ -347,4 +395,3 @@ MoveData getMoveData(int charId, MoveKind kind) {
 }
 
 } // namespace vk
-

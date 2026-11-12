@@ -9,7 +9,7 @@ namespace vk {
 struct UiState {
     int titleSelection = 0;
     int modeSelection = 0;
-    int difficultySelection = 1; // 0=Easy, 1=Normal, 2=Brutal
+    int difficultySelection = 2; // 0=Beginner, 1=Amateur, 2=Semi-Pro, 3=Pro, 4=Legendary
     int p1Select = 0;
     int p2Select = 1;
     bool selectingP2 = false;
