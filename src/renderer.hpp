@@ -2,6 +2,7 @@
 
 #include "types.hpp"
 #include "combat.hpp"
+#include "fighter_gfx.hpp"
 #include <vita2d.h>
 
 namespace vk {
@@ -46,14 +47,13 @@ private:
     vita2d_texture* activeStageTex_ = nullptr;
     int activeStageId_ = -1;
     vita2d_texture* keyArtTex_ = nullptr;
+    FighterGfx fighterGfx_;
 
     void drawTextCentered(float cx, float y, uint32_t color, float scale, const char* text);
     void drawTextShadow(float x, float y, uint32_t color, float scale, const char* text);
     void drawTextCenteredShadow(float cx, float y, uint32_t color, float scale, const char* text);
     void drawRectOutline(float x, float y, float w, float h, float thickness, uint32_t color);
-    void drawCapsule(float x1, float y1, float x2, float y2, float r, uint32_t color);
-    void drawFighterModel(const Fighter& f, float baseX, float baseY, int globalFrame, float scale = 1.0f);
-    void drawFighterPortrait(int charId, float cx, float cy, float scale, int globalFrame);
+    void drawStatBar(float x, float y, float w, float h, float ratio, uint32_t fillCol, const char* label);
     void drawStageBackdrop(int stageId, int globalFrame, bool dim);
 };
 

@@ -26,6 +26,7 @@ add_executable(${PROJECT_NAME}
     src/characters.cpp
     src/audio.cpp
     src/combat.cpp
+    src/fighter_gfx.cpp
     src/renderer.cpp
 )
 
