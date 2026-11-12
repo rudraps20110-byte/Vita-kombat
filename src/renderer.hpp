@@ -26,6 +26,7 @@ public:
     bool init();
     void shutdown();
 
+    void prepareStage(int stageId);
     void beginFrame();
     void endFrame();
 
@@ -42,7 +43,8 @@ public:
 
 private:
     vita2d_pgf* font_ = nullptr;
-    vita2d_texture* stageTextures_[STAGE_COUNT] = {nullptr, nullptr, nullptr, nullptr};
+    vita2d_texture* activeStageTex_ = nullptr;
+    int activeStageId_ = -1;
     vita2d_texture* keyArtTex_ = nullptr;
 
     void drawTextCentered(float cx, float y, uint32_t color, float scale, const char* text);

@@ -27,25 +27,19 @@ uint32_t withAlpha(uint32_t c, uint8_t alpha) {
 } // namespace
 
 bool Renderer::init() {
-    vita2d_init();
+    vita2d_init_advanced(8 * 1024 * 1024);
     vita2d_set_clear_color(rgba(10, 8, 14));
     font_ = vita2d_load_default_pgf();
-
-    for (int i = 0; i < STAGE_COUNT; ++i) {
-        const StageDef& st = getStage(i);
-        stageTextures_[i] = vita2d_load_PNG_file(st.imagePath);
-    }
     keyArtTex_ = vita2d_load_PNG_file("app0:assets/keyart.png");
     return (font_ != nullptr);
 }
 
 void Renderer::shutdown() {
     vita2d_wait_rendering_done();
-    for (int i = 0; i < STAGE_COUNT; ++i) {
-        if (stageTextures_[i]) {
-            vita2d_free_texture(stageTextures_[i]);
-            stageTextures_[i] = nullptr;
-        }
+    if (activeStageTex_) {
+        vita2d_free_texture(activeStageTex_);
+        activeStageTex_ = nullptr;
+        activeStageId_ = -1;
     }
     if (keyArtTex_) {
         vita2d_free_texture(keyArtTex_);
@@ -56,6 +50,17 @@ void Renderer::shutdown() {
         font_ = nullptr;
     }
     vita2d_fini();
+}
+
+void Renderer::prepareStage(int stageId) {
+    if (activeStageId_ == stageId && activeStageTex_) return;
+    vita2d_wait_rendering_done();
+    if (activeStageTex_) {
+        vita2d_free_texture(activeStageTex_);
+        activeStageTex_ = nullptr;
+    }
+    activeStageId_ = stageId;
+    activeStageTex_ = vita2d_load_PNG_file(getStage(stageId).imagePath);
 }
 
 void Renderer::beginFrame() {
@@ -102,7 +107,7 @@ void Renderer::drawCapsule(float x1, float y1, float x2, float y2, float r, uint
     float len = std::sqrt(dx * dx + dy * dy);
     if (len < 0.5f) return;
 
-    int steps = std::max(2, static_cast<int>(len / std::max(2.0f, r * 0.55f)));
+    int steps = std::min(6, std::max(2, static_cast<int>(len / std::max(3.0f, r * 0.85f))));
     for (int i = 1; i < steps; ++i) {
         float t = static_cast<float>(i) / static_cast<float>(steps);
         vita2d_draw_fill_circle(x1 + dx * t, y1 + dy * t, r, color);
@@ -111,12 +116,14 @@ void Renderer::drawCapsule(float x1, float y1, float x2, float y2, float r, uint
 
 void Renderer::drawStageBackdrop(int stageId, int globalFrame, bool dim) {
     const StageDef& st = getStage(stageId);
-    if (stageTextures_[stageId]) {
-        float tw = static_cast<float>(vita2d_texture_get_width(stageTextures_[stageId]));
-        float th = static_cast<float>(vita2d_texture_get_height(stageTextures_[stageId]));
-        vita2d_draw_texture_scale(stageTextures_[stageId], 0.0f, 0.0f,
-                                  static_cast<float>(SCREEN_W) / tw,
-                                  static_cast<float>(SCREEN_H) / th);
+    if (activeStageTex_ && activeStageId_ == stageId) {
+        float tw = static_cast<float>(vita2d_texture_get_width(activeStageTex_));
+        float th = static_cast<float>(vita2d_texture_get_height(activeStageTex_));
+        if (tw > 0.0f && th > 0.0f) {
+            vita2d_draw_texture_scale(activeStageTex_, 0.0f, 0.0f,
+                                      static_cast<float>(SCREEN_W) / tw,
+                                      static_cast<float>(SCREEN_H) / th);
+        }
     } else {
         // Fallback procedural gradient stage
         for (int band = 0; band < 16; ++band) {
@@ -620,14 +627,9 @@ void Renderer::drawStageSelect(const UiState& ui) {
         float chH = 220.0f;
 
         vita2d_draw_rectangle(cx, cy, cw, chH, rgba(16, 14, 24, 225));
-        if (stageTextures_[i]) {
-            float tw = static_cast<float>(vita2d_texture_get_width(stageTextures_[i]));
-            float th = static_cast<float>(vita2d_texture_get_height(stageTextures_[i]));
-            vita2d_draw_texture_scale(stageTextures_[i], cx + 8.0f, cy + 8.0f,
-                                      (cw - 16.0f) / tw, 125.0f / th);
-        } else {
-            vita2d_draw_rectangle(cx + 8.0f, cy + 8.0f, cw - 16.0f, 125.0f, st.skyBottom);
-        }
+        vita2d_draw_rectangle(cx + 8.0f, cy + 8.0f, cw - 16.0f, 125.0f, st.skyBottom);
+        vita2d_draw_rectangle(cx + 8.0f, cy + 98.0f, cw - 16.0f, 35.0f, st.floorColor);
+        vita2d_draw_rectangle(cx + 8.0f, cy + 96.0f, cw - 16.0f, 4.0f, st.accentColor);
 
         drawRectOutline(cx, cy, cw, chH, sel ? 3.5f : 1.5f, sel ? rgba(255, 210, 60) : rgba(90, 90, 115));
         drawTextCenteredShadow(cx + cw * 0.5f, cy + 166.0f, sel ? rgba(255, 230, 120) : rgba(235, 235, 245), 0.90f, st.name);

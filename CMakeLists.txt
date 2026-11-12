@@ -37,7 +37,6 @@ target_link_libraries(${PROJECT_NAME}
     z
     m
     SceAppMgr_stub
-    SceAppUtil_stub
     SceAudio_stub
     ScePgf_stub
     ScePvf_stub

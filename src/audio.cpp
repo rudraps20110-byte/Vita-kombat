@@ -3,6 +3,7 @@
 #include <psp2/audioout.h>
 #include <psp2/kernel/threadmgr.h>
 #include <psp2/kernel/processmgr.h>
+#include <atomic>
 #include <cmath>
 #include <cstring>
 #include <algorithm>
@@ -14,10 +15,12 @@ namespace {
 constexpr int SAMPLE_RATE = 48000;
 constexpr int CHUNK_SAMPLES = 512;
 constexpr int MAX_VOICES = 12;
+constexpr int QUEUE_SIZE = 16;
+constexpr int SINE_LUT_SIZE = 1024;
 constexpr float TWO_PI = 6.28318530718f;
 
 struct SynthVoice {
-    volatile bool active = false;
+    bool active = false;
     float freqStart = 220.0f;
     float freqEnd = 110.0f;
     float phase = 0.0f;
@@ -28,7 +31,21 @@ struct SynthVoice {
     int duration = 4800;
 };
 
+struct VoiceRequest {
+    float f0;
+    float f1;
+    float durSec;
+    float vol;
+    float noise;
+    float square;
+};
+
 SynthVoice gVoices[MAX_VOICES];
+VoiceRequest gQueue[QUEUE_SIZE];
+std::atomic<uint32_t> gQueueHead{0};
+std::atomic<uint32_t> gQueueTail{0};
+float gSineTable[SINE_LUT_SIZE];
+bool gLutReady = false;
 uint32_t gRngState = 0x12345678u;
 
 inline float nextNoise() {
@@ -43,7 +60,17 @@ int audioThreadEntry(SceSize /*args*/, void* argp) {
     return 0;
 }
 
-void triggerVoice(float f0, float f1, float durSec, float vol, float noise, float square) {
+void enqueueVoice(float f0, float f1, float durSec, float vol, float noise, float square) {
+    uint32_t head = gQueueHead.load(std::memory_order_relaxed);
+    uint32_t tail = gQueueTail.load(std::memory_order_acquire);
+    if (head - tail >= QUEUE_SIZE) {
+        return; // queue full, drop gracefully
+    }
+    gQueue[head % QUEUE_SIZE] = VoiceRequest{f0, f1, durSec, vol, noise, square};
+    gQueueHead.store(head + 1, std::memory_order_release);
+}
+
+void activateVoice(const VoiceRequest& req) {
     int slot = 0;
     int oldest = -1;
     for (int i = 0; i < MAX_VOICES; ++i) {
@@ -57,15 +84,14 @@ void triggerVoice(float f0, float f1, float durSec, float vol, float noise, floa
         }
     }
     SynthVoice& v = gVoices[slot];
-    v.active = false;
-    v.freqStart = f0;
-    v.freqEnd = f1;
+    v.freqStart = req.f0;
+    v.freqEnd = req.f1;
     v.phase = 0.0f;
-    v.noiseMix = noise;
-    v.squareMix = square;
-    v.volume = vol;
+    v.noiseMix = req.noise;
+    v.squareMix = req.square;
+    v.volume = req.vol;
     v.elapsed = 0;
-    v.duration = std::max(1, static_cast<int>(durSec * SAMPLE_RATE));
+    v.duration = std::max(1, static_cast<int>(req.durSec * SAMPLE_RATE));
     v.active = true;
 }
 
@@ -73,6 +99,13 @@ void triggerVoice(float f0, float f1, float durSec, float vol, float noise, floa
 
 bool AudioEngine::init() {
     if (initialized_) return true;
+
+    if (!gLutReady) {
+        for (int i = 0; i < SINE_LUT_SIZE; ++i) {
+            gSineTable[i] = std::sin((TWO_PI * static_cast<float>(i)) / static_cast<float>(SINE_LUT_SIZE));
+        }
+        gLutReady = true;
+    }
 
     port_ = sceAudioOutOpenPort(
         SCE_AUDIO_OUT_PORT_TYPE_MAIN,
@@ -92,7 +125,7 @@ bool AudioEngine::init() {
         "VitaKombatAudio",
         audioThreadEntry,
         0x10000100,
-        0x10000,
+        0x20000,
         0,
         0,
         nullptr
@@ -135,40 +168,40 @@ void AudioEngine::play(SoundId id) {
 
     switch (id) {
         case SoundId::MENU_MOVE:
-            triggerVoice(520.0f, 640.0f, 0.045f, 0.18f, 0.0f, 0.4f);
+            enqueueVoice(520.0f, 640.0f, 0.045f, 0.18f, 0.0f, 0.4f);
             break;
         case SoundId::MENU_SELECT:
-            triggerVoice(440.0f, 880.0f, 0.11f, 0.24f, 0.0f, 0.6f);
+            enqueueVoice(440.0f, 880.0f, 0.11f, 0.24f, 0.0f, 0.6f);
             break;
         case SoundId::HIT_LIGHT:
-            triggerVoice(190.0f, 70.0f, 0.09f, 0.36f, 0.65f, 0.2f);
+            enqueueVoice(190.0f, 70.0f, 0.09f, 0.36f, 0.65f, 0.2f);
             break;
         case SoundId::HIT_HEAVY:
-            triggerVoice(150.0f, 42.0f, 0.19f, 0.50f, 0.72f, 0.3f);
+            enqueueVoice(150.0f, 42.0f, 0.19f, 0.50f, 0.72f, 0.3f);
             break;
         case SoundId::BLOCK:
-            triggerVoice(720.0f, 360.0f, 0.08f, 0.28f, 0.25f, 0.8f);
+            enqueueVoice(720.0f, 360.0f, 0.08f, 0.28f, 0.25f, 0.8f);
             break;
         case SoundId::WHOOSH:
-            triggerVoice(340.0f, 140.0f, 0.07f, 0.18f, 0.85f, 0.0f);
+            enqueueVoice(340.0f, 140.0f, 0.07f, 0.18f, 0.85f, 0.0f);
             break;
         case SoundId::FIREBALL:
-            triggerVoice(260.0f, 90.0f, 0.22f, 0.32f, 0.75f, 0.2f);
+            enqueueVoice(260.0f, 90.0f, 0.22f, 0.32f, 0.75f, 0.2f);
             break;
         case SoundId::FREEZE:
-            triggerVoice(1280.0f, 680.0f, 0.26f, 0.30f, 0.15f, 0.5f);
+            enqueueVoice(1280.0f, 680.0f, 0.26f, 0.30f, 0.15f, 0.5f);
             break;
         case SoundId::THUNDER:
-            triggerVoice(420.0f, 55.0f, 0.28f, 0.44f, 0.80f, 0.4f);
+            enqueueVoice(420.0f, 55.0f, 0.28f, 0.44f, 0.80f, 0.4f);
             break;
         case SoundId::UPPERCUT:
-            triggerVoice(140.0f, 480.0f, 0.22f, 0.46f, 0.50f, 0.3f);
+            enqueueVoice(140.0f, 480.0f, 0.22f, 0.46f, 0.50f, 0.3f);
             break;
         case SoundId::SUPER_FLASH:
-            triggerVoice(220.0f, 1100.0f, 0.35f, 0.40f, 0.25f, 0.7f);
+            enqueueVoice(220.0f, 1100.0f, 0.35f, 0.40f, 0.25f, 0.7f);
             break;
         case SoundId::KO_BOOM:
-            triggerVoice(120.0f, 28.0f, 0.55f, 0.58f, 0.78f, 0.35f);
+            enqueueVoice(120.0f, 28.0f, 0.55f, 0.58f, 0.78f, 0.35f);
             break;
     }
 }
@@ -177,6 +210,14 @@ void AudioEngine::audioLoop() {
     int16_t buffer[CHUNK_SAMPLES * 2];
 
     while (running_) {
+        uint32_t head = gQueueHead.load(std::memory_order_acquire);
+        uint32_t tail = gQueueTail.load(std::memory_order_relaxed);
+        while (tail < head) {
+            activateVoice(gQueue[tail % QUEUE_SIZE]);
+            tail++;
+        }
+        gQueueTail.store(tail, std::memory_order_release);
+
         std::memset(buffer, 0, sizeof(buffer));
 
         if (!muted_) {
@@ -194,10 +235,13 @@ void AudioEngine::audioLoop() {
 
                     float env = (1.0f - t) * (1.0f - t);
                     float freq = v.freqStart + (v.freqEnd - v.freqStart) * t;
-                    v.phase += (TWO_PI * freq) / static_cast<float>(SAMPLE_RATE);
-                    if (v.phase > TWO_PI) v.phase -= TWO_PI;
+                    v.phase += (freq * static_cast<float>(SINE_LUT_SIZE)) / static_cast<float>(SAMPLE_RATE);
+                    if (v.phase >= static_cast<float>(SINE_LUT_SIZE)) {
+                        v.phase -= static_cast<float>(SINE_LUT_SIZE);
+                    }
 
-                    float sineVal = std::sin(v.phase);
+                    int lutIdx = static_cast<int>(v.phase) & (SINE_LUT_SIZE - 1);
+                    float sineVal = gSineTable[lutIdx];
                     float sqVal = (sineVal >= 0.0f) ? 1.0f : -1.0f;
                     float osc = sineVal * (1.0f - v.squareMix) + sqVal * v.squareMix;
                     float noise = nextNoise();

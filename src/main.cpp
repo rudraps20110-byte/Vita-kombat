@@ -1,6 +1,5 @@
 #include <psp2/ctrl.h>
 #include <psp2/kernel/processmgr.h>
-#include <psp2/apputil.h>
 #include <ctime>
 #include <cstdlib>
 #include <algorithm>
@@ -10,6 +9,11 @@
 #include "audio.hpp"
 #include "combat.hpp"
 #include "renderer.hpp"
+
+extern "C" {
+int _newlib_heap_size_user = 96 * 1024 * 1024;
+unsigned int sceUserMainThreadStackSize = 1 * 1024 * 1024;
+}
 
 using namespace vk;
 
@@ -95,10 +99,6 @@ int main() {
     std::srand(static_cast<unsigned int>(std::time(nullptr)));
     sceCtrlSetSamplingMode(SCE_CTRL_MODE_ANALOG);
 
-    SceAppUtilInitParam appUtilParam{};
-    SceAppUtilBootParam appUtilBoot{};
-    sceAppUtilInit(&appUtilParam, &appUtilBoot);
-
     Renderer renderer;
     if (!renderer.init()) {
         sceKernelExitProcess(1);
@@ -167,6 +167,7 @@ int main() {
                     audio.play(SoundId::MENU_MOVE);
                     screen = GameScreen::TITLE;
                 }
+                renderer.prepareStage(3);
                 renderer.beginFrame();
                 renderer.drawModeSelect(ui);
                 renderer.endFrame();
@@ -204,6 +205,7 @@ int main() {
                         screen = GameScreen::MODE_SELECT;
                     }
                 }
+                renderer.prepareStage(1);
                 renderer.beginFrame();
                 renderer.drawCharacterSelect(ui);
                 renderer.endFrame();
@@ -225,21 +227,25 @@ int main() {
                     audio.play(SoundId::MENU_MOVE);
                     screen = GameScreen::CHAR_SELECT;
                 }
+                renderer.prepareStage(ui.stageSelect);
                 renderer.beginFrame();
                 renderer.drawStageSelect(ui);
                 renderer.endFrame();
                 break;
 
-            case GameScreen::VS_SPLASH:
+            case GameScreen::VS_SPLASH: {
                 ui.splashTimer--;
                 if (ui.splashTimer <= 0 || in.crossPressed || in.startPressed) {
                     launchCurrentMatch(match, ui);
                     screen = GameScreen::FIGHT;
                 }
+                int stageId = (ui.modeSelection == 0) ? (ui.arcadeStageIndex % STAGE_COUNT) : ui.stageSelect;
+                renderer.prepareStage(stageId);
                 renderer.beginFrame();
                 renderer.drawVsSplash(ui);
                 renderer.endFrame();
                 break;
+            }
 
             case GameScreen::FIGHT:
                 if (in.startPressed) {
@@ -252,6 +258,7 @@ int main() {
                         screen = GameScreen::MATCH_OVER;
                     }
                 }
+                renderer.prepareStage(match.stageId);
                 renderer.beginFrame();
                 renderer.drawMatch(match, ui.frameCount);
                 renderer.endFrame();
@@ -327,6 +334,7 @@ int main() {
                     audio.play(SoundId::MENU_SELECT);
                     screen = GameScreen::TITLE;
                 }
+                renderer.prepareStage(3);
                 renderer.beginFrame();
                 renderer.drawArcadeVictoryScreen(ui);
                 renderer.endFrame();
@@ -336,7 +344,6 @@ int main() {
 
     audio.shutdown();
     renderer.shutdown();
-    sceAppUtilShutdown();
     sceKernelExitProcess(0);
     return 0;
 }
