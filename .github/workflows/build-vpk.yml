@@ -1,0 +1,31 @@
+name: Build VitaKombat VPK
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build-vpk:
+    runs-on: ubuntu-latest
+    container:
+      image: vitasdk/vitasdk:latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Configure and build VitaKombat.vpk
+        run: |
+          mkdir -p build
+          cd build
+          cmake .. -DCMAKE_TOOLCHAIN_FILE=$VITASDK/share/vita.toolchain.cmake
+          make -j$(nproc)
+
+      - name: Upload VitaKombat.vpk artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: VitaKombat-vpk
+          path: build/VitaKombat.vpk
+
