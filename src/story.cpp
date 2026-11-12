@@ -387,3 +387,4 @@ void saveStoryProgress(const StoryProgress& prog) {
 }
 
 } // namespace vk
+

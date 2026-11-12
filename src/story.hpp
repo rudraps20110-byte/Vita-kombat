@@ -76,3 +76,4 @@ void loadStoryProgress(StoryProgress& prog);
 void saveStoryProgress(const StoryProgress& prog);
 
 } // namespace vk
+
