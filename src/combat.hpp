@@ -13,6 +13,10 @@ struct MatchState {
     std::vector<Particle> particles;
     std::vector<Shockwave> shockwaves;
     std::vector<AcidPool> acidPools;
+    std::vector<FloorDecal> decals;
+
+    float cameraX = SCREEN_W * 0.5f;
+    float cameraZoom = 1.05f;
 
     int stageId = 0;
     GameMode mode = GameMode::ARCADE;

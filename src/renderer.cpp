@@ -24,13 +24,14 @@ bool Renderer::init() {
     vita2d_set_clear_color(rgba(10, 8, 14));
     font_ = vita2d_load_default_pgf();
     keyArtTex_ = vita2d_load_PNG_file("app0:assets/keyart.png");
-    const char* storyPaths[4] = {
+    const char* storyPaths[5] = {
         "app0:assets/story/art_0.png",
         "app0:assets/story/art_1.png",
         "app0:assets/story/art_2.png",
-        "app0:assets/story/art_3.png"
+        "app0:assets/story/art_3.png",
+        "app0:assets/story/art_4.png"
     };
-    for (int i = 0; i < 4; ++i) {
+    for (int i = 0; i < 5; ++i) {
         storyArtTex_[i] = vita2d_load_PNG_file(storyPaths[i]);
     }
     fighterGfx_.init();
@@ -40,7 +41,7 @@ bool Renderer::init() {
 void Renderer::shutdown() {
     vita2d_wait_rendering_done();
     fighterGfx_.shutdown();
-    for (int i = 0; i < 4; ++i) {
+    for (int i = 0; i < 5; ++i) {
         if (storyArtTex_[i]) {
             vita2d_free_texture(storyArtTex_[i]);
             storyArtTex_[i] = nullptr;
@@ -118,15 +119,20 @@ void Renderer::drawStatBar(float x, float y, float w, float h, float ratio, uint
     drawRectOutline(bx, y, bw, h, 1.2f, rgba(95, 90, 120));
 }
 
-void Renderer::drawStageBackdrop(int stageId, int globalFrame, bool dim) {
+void Renderer::drawStageBackdrop(int stageId, int globalFrame, bool dim, float camX, float camZoom) {
     const StageDef& st = getStage(stageId);
+    float panOffset = (SCREEN_W * 0.5f - camX) * 0.35f;
+    float bgScale = std::max(1.0f, camZoom * 1.03f);
+
     if (activeStageTex_ && activeStageId_ == stageId) {
         float tw = static_cast<float>(vita2d_texture_get_width(activeStageTex_));
         float th = static_cast<float>(vita2d_texture_get_height(activeStageTex_));
         if (tw > 0.0f && th > 0.0f) {
-            vita2d_draw_texture_scale(activeStageTex_, 0.0f, 0.0f,
-                                      static_cast<float>(SCREEN_W) / tw,
-                                      static_cast<float>(SCREEN_H) / th);
+            float dw = static_cast<float>(SCREEN_W) * bgScale;
+            float dh = static_cast<float>(SCREEN_H) * bgScale;
+            float dx = (SCREEN_W - dw) * 0.5f + panOffset;
+            float dy = (SCREEN_H - dh) * 0.65f;
+            vita2d_draw_texture_scale(activeStageTex_, dx, dy, dw / tw, dh / th);
         }
     } else {
         for (int band = 0; band < 16; ++band) {
@@ -218,9 +224,12 @@ void Renderer::drawStageBackdrop(int stageId, int globalFrame, bool dim) {
         vita2d_draw_line(355.0f, 115.0f, 310.0f, 230.0f, rgba(220, 240, 255, 230));
     }
 
-    // Subtle cinematic edge vignette
-    vita2d_draw_rectangle(0, 0, 24.0f, SCREEN_H, rgba(0, 0, 0, 80));
-    vita2d_draw_rectangle(SCREEN_W - 24.0f, 0, 24.0f, SCREEN_H, rgba(0, 0, 0, 80));
+    // Subtle cinematic edge vignette + parallax dark ruined foreground silhouettes
+    float fgShift = (SCREEN_W * 0.5f - camX) * 0.58f;
+    vita2d_draw_rectangle(-18.0f + fgShift * 0.6f, 0.0f, 34.0f, SCREEN_H, rgba(8, 6, 12, 130));
+    vita2d_draw_rectangle(SCREEN_W - 16.0f + fgShift * 0.6f, 0.0f, 34.0f, SCREEN_H, rgba(8, 6, 12, 130));
+    vita2d_draw_rectangle(0, 0, 24.0f, SCREEN_H, rgba(0, 0, 0, 85));
+    vita2d_draw_rectangle(SCREEN_W - 24.0f, 0, 24.0f, SCREEN_H, rgba(0, 0, 0, 85));
 
     if (dim) {
         vita2d_draw_rectangle(0, 0, SCREEN_W, SCREEN_H, rgba(0, 0, 0, 155));
@@ -304,6 +313,7 @@ void Renderer::drawStoryIllustration(StoryArtStyle style, float x, float y, floa
     else if (style == StoryArtStyle::PAINTED_PORTRAIT_1) texIdx = 1;
     else if (style == StoryArtStyle::PAINTED_PORTRAIT_2) texIdx = 2;
     else if (style == StoryArtStyle::PAINTED_PORTRAIT_3) texIdx = 3;
+    else if (style == StoryArtStyle::SCENE_MAGMA_BIRTH) texIdx = 4;
 
     if (texIdx >= 0 && storyArtTex_[texIdx]) {
         float tw = static_cast<float>(vita2d_texture_get_width(storyArtTex_[texIdx]));
@@ -882,31 +892,39 @@ void Renderer::drawVsSplash(const UiState& ui) {
     int p2Id = (ui.modeSelection == 0) ? ui.arcadeOpponents[ui.arcadeStageIndex] : ui.p2Select;
     const CharacterDef& p2 = getCharacter(p2Id);
 
-    // Side fighter cards with large bust portraits + full shaded fighters
-    vita2d_draw_rectangle(70.0f, 110.0f, 300.0f, 350.0f, rgba(16, 12, 24, 200));
-    drawRectOutline(70.0f, 110.0f, 300.0f, 350.0f, 2.5f, p1.accentColor);
-    fighterGfx_.drawBustPortrait(p1.id, 130.0f, 126.0f, 180.0f);
+    // Side fighter cards with large MK9 steel-framed realistic bust portraits + live fighters
+    vita2d_draw_rectangle(54.0f, 88.0f, 324.0f, 382.0f, rgba(14, 10, 20, 225));
+    drawRectOutline(54.0f, 88.0f, 324.0f, 382.0f, 3.0f, rgba(165, 165, 185));
+    drawRectOutline(58.0f, 92.0f, 316.0f, 374.0f, 2.0f, p1.accentColor);
+    fighterGfx_.drawBustPortrait(p1.id, 111.0f, 102.0f, 210.0f);
+    drawRectOutline(111.0f, 102.0f, 210.0f, 210.0f, 2.5f, p1.accentColor);
 
-    vita2d_draw_rectangle(590.0f, 110.0f, 300.0f, 350.0f, rgba(16, 12, 24, 200));
-    drawRectOutline(590.0f, 110.0f, 300.0f, 350.0f, 2.5f, p2.accentColor);
-    fighterGfx_.drawBustPortrait(p2.id, 650.0f, 126.0f, 180.0f);
+    vita2d_draw_rectangle(582.0f, 88.0f, 324.0f, 382.0f, rgba(14, 10, 20, 225));
+    drawRectOutline(582.0f, 88.0f, 324.0f, 382.0f, 3.0f, rgba(165, 165, 185));
+    drawRectOutline(586.0f, 92.0f, 316.0f, 374.0f, 2.0f, p2.accentColor);
+    fighterGfx_.drawBustPortrait(p2.id, 639.0f, 102.0f, 210.0f);
+    drawRectOutline(639.0f, 102.0f, 210.0f, 210.0f, 2.5f, p2.accentColor);
 
     Fighter p1Model, p2Model;
     p1Model.charId = p1.id; p1Model.facing = 1; p1Model.state = FighterState::IDLE; p1Model.y = GROUND_Y;
     p2Model.charId = p2.id; p2Model.facing = -1; p2Model.state = FighterState::IDLE; p2Model.y = GROUND_Y;
-    fighterGfx_.drawFighter(p1Model, 325.0f, 386.0f, ui.frameCount);
-    fighterGfx_.drawFighter(p2Model, 635.0f, 386.0f, ui.frameCount);
+    fighterGfx_.drawFighter(p1Model, 340.0f, 388.0f, ui.frameCount);
+    fighterGfx_.drawFighter(p2Model, 620.0f, 388.0f, ui.frameCount);
 
-    drawTextCenteredShadow(220.0f, 365.0f, p1.accentColor, 1.45f, p1.name);
-    drawTextCenteredShadow(220.0f, 392.0f, rgba(220, 220, 230), 0.85f, p1.title);
-    drawTextCenteredShadow(220.0f, 434.0f, rgba(175, 255, 190), 0.72f, p1.quote);
+    drawTextCenteredShadow(216.0f, 356.0f, p1.accentColor, 1.50f, p1.name);
+    drawTextCenteredShadow(216.0f, 386.0f, rgba(220, 220, 230), 0.86f, p1.title);
+    drawTextCenteredShadow(216.0f, 434.0f, rgba(175, 255, 190), 0.72f, p1.quote);
 
-    drawTextCenteredShadow(740.0f, 365.0f, p2.accentColor, 1.45f, p2.name);
-    drawTextCenteredShadow(740.0f, 392.0f, rgba(220, 220, 230), 0.85f, p2.title);
-    drawTextCenteredShadow(740.0f, 434.0f, rgba(255, 190, 180), 0.72f, p2.quote);
+    drawTextCenteredShadow(744.0f, 356.0f, p2.accentColor, 1.50f, p2.name);
+    drawTextCenteredShadow(744.0f, 386.0f, rgba(220, 220, 230), 0.86f, p2.title);
+    drawTextCenteredShadow(744.0f, 434.0f, rgba(255, 190, 180), 0.72f, p2.quote);
 
-    vita2d_draw_fill_circle(SCREEN_W * 0.5f, 250.0f, 48.0f, rgba(175, 25, 25, 210));
-    drawTextCenteredShadow(SCREEN_W * 0.5f, 266.0f, rgba(255, 220, 75), 2.3f, "VS");
+    // Crossed steel clash blades & metallic VS medallion
+    vita2d_draw_line(426.0f, 196.0f, 534.0f, 304.0f, rgba(215, 225, 240, 215));
+    vita2d_draw_line(534.0f, 196.0f, 426.0f, 304.0f, rgba(215, 225, 240, 215));
+    vita2d_draw_fill_circle(SCREEN_W * 0.5f, 250.0f, 50.0f, rgba(35, 12, 16, 235));
+    vita2d_draw_fill_circle(SCREEN_W * 0.5f, 250.0f, 44.0f, rgba(175, 22, 24, 225));
+    drawTextCenteredShadow(SCREEN_W * 0.5f, 266.0f, rgba(255, 220, 75), 2.35f, "VS");
 
     if (ui.modeSelection == 0) {
         char ladderBuf[64];
@@ -924,37 +942,58 @@ void Renderer::drawMatch(const MatchState& m, int globalFrame) {
         shakeY = std::cos(globalFrame * 2.7f) * m.screenShakeMag * 0.6f;
     }
 
-    drawStageBackdrop(m.stageId, globalFrame, m.superFlashFrames > 0 || m.xrayFlashFrames > 0 || m.finishHimActive || m.finisherSequenceFrames > 0);
+    drawStageBackdrop(m.stageId, globalFrame, m.superFlashFrames > 0 || m.xrayFlashFrames > 0 || m.finishHimActive || m.finisherSequenceFrames > 0, m.cameraX, m.cameraZoom);
+
+    auto toScreenX = [&](float wx) -> float {
+        return SCREEN_W * 0.5f + (wx - m.cameraX) * m.cameraZoom + shakeX;
+    };
+    auto toScreenY = [&](float wy) -> float {
+        return GROUND_Y - (GROUND_Y - wy) * m.cameraZoom + shakeY;
+    };
+
+    // Persistent MK9-style floor battle decals (blood pools, hydraulic oil, scorch & frost scars)
+    for (const auto& d : m.decals) {
+        float dx = toScreenX(d.x);
+        float dw = d.width * m.cameraZoom;
+        float dy = toScreenY(GROUND_Y);
+        vita2d_draw_rectangle(dx - dw * 0.5f, dy - 1.5f, dw, d.height, d.color);
+        if (!d.isScorch) {
+            vita2d_draw_rectangle(dx - dw * 0.3f, dy - 0.5f, dw * 0.6f, 2.5f, withAlpha(d.color, 235));
+        }
+    }
 
     // Acid pools on floor
     for (const auto& pool : m.acidPools) {
         if (!pool.active) continue;
-        vita2d_draw_rectangle(pool.x - pool.width * 0.5f + shakeX, GROUND_Y - 5.0f + shakeY,
-                              pool.width, 10.0f, rgba(75, 245, 50, 185));
-        vita2d_draw_rectangle(pool.x - pool.width * 0.35f + shakeX, GROUND_Y - 3.0f + shakeY,
-                              pool.width * 0.7f, 4.0f, rgba(185, 255, 110, 220));
+        float px = toScreenX(pool.x);
+        float py = toScreenY(GROUND_Y);
+        float pw = pool.width * m.cameraZoom;
+        vita2d_draw_rectangle(px - pw * 0.5f, py - 5.0f,
+                              pw, 10.0f, rgba(75, 245, 50, 185));
+        vita2d_draw_rectangle(px - pw * 0.35f, py - 3.0f,
+                              pw * 0.7f, 4.0f, rgba(185, 255, 110, 220));
     }
 
     // Full-body translucent ghost afterimages for dashes & teleports
     for (int i = 0; i < 2; ++i) {
         if (m.fighters[i].ghostTimer > 0) {
             uint8_t ga = static_cast<uint8_t>(std::min(165, m.fighters[i].ghostTimer * 12));
-            fighterGfx_.drawFighter(m.fighters[i], m.fighters[i].ghostX + shakeX, m.fighters[i].ghostY + shakeY, globalFrame, true, ga);
+            fighterGfx_.drawFighter(m.fighters[i], toScreenX(m.fighters[i].ghostX), toScreenY(m.fighters[i].ghostY), globalFrame, true, ga);
         }
     }
 
     // Fighters
-    fighterGfx_.drawFighter(m.fighters[0], m.fighters[0].x + shakeX, m.fighters[0].y + shakeY, globalFrame);
-    fighterGfx_.drawFighter(m.fighters[1], m.fighters[1].x + shakeX, m.fighters[1].y + shakeY, globalFrame);
+    fighterGfx_.drawFighter(m.fighters[0], toScreenX(m.fighters[0].x), toScreenY(m.fighters[0].y), globalFrame);
+    fighterGfx_.drawFighter(m.fighters[1], toScreenX(m.fighters[1].x), toScreenY(m.fighters[1].y), globalFrame);
 
     // Shockwave rings
     for (const auto& sw : m.shockwaves) {
         if (!sw.active) continue;
         uint8_t a = static_cast<uint8_t>(220.0f * (static_cast<float>(sw.life) / static_cast<float>(sw.maxLife)));
         uint32_t col = withAlpha(sw.color, a);
-        float sx = sw.x + shakeX;
-        float sy = sw.y + shakeY;
-        float r = sw.radius;
+        float sx = toScreenX(sw.x);
+        float sy = toScreenY(sw.y);
+        float r = sw.radius * m.cameraZoom;
         for (int seg = 0; seg < 14; ++seg) {
             float a0 = (seg * 6.28318f) / 14.0f;
             float a1 = ((seg + 1) * 6.28318f) / 14.0f;
@@ -966,15 +1005,13 @@ void Renderer::drawMatch(const MatchState& m, int globalFrame) {
     // Projectiles & Special FX (custom shaded rotating/directional textures!)
     for (const auto& pr : m.projectiles) {
         if (!pr.active) continue;
-        float px = pr.x + shakeX;
-        float py = pr.y + shakeY;
-        fighterGfx_.drawProjectile(pr, px, py, globalFrame);
+        fighterGfx_.drawProjectile(pr, toScreenX(pr.x), toScreenY(pr.y), globalFrame);
     }
 
     // Starburst Hit-Spark Rays during impact hitstop
     if (m.hitstopFrames > 0) {
-        float hx = (m.fighters[0].x + m.fighters[1].x) * 0.5f + shakeX;
-        float hy = std::min(m.fighters[0].y, m.fighters[1].y) - 80.0f + shakeY;
+        float hx = toScreenX((m.fighters[0].x + m.fighters[1].x) * 0.5f);
+        float hy = toScreenY(std::min(m.fighters[0].y, m.fighters[1].y) - 80.0f);
         for (int ray = 0; ray < 8; ++ray) {
             float ang = (ray * 3.14159f) / 4.0f + globalFrame * 0.2f;
             vita2d_draw_line(hx, hy, hx + std::cos(ang) * 34.0f, hy + std::sin(ang) * 34.0f, rgba(255, 240, 140, 235));
@@ -985,18 +1022,18 @@ void Renderer::drawMatch(const MatchState& m, int globalFrame) {
     for (const auto& pt : m.particles) {
         if (!pt.active) continue;
         uint8_t a = static_cast<uint8_t>(255.0f * (static_cast<float>(pt.life) / static_cast<float>(pt.maxLife)));
-        vita2d_draw_fill_circle(pt.x + shakeX, pt.y + shakeY, pt.size, withAlpha(pt.color, a));
+        vita2d_draw_fill_circle(toScreenX(pt.x), toScreenY(pt.y), pt.size * m.cameraZoom, withAlpha(pt.color, a));
     }
 
     // X-Ray Super Impact Silhouette Flash!
     if (m.xrayFlashFrames > 0 && m.xrayTargetSlot >= 0 && m.xrayTargetSlot <= 1) {
         const Fighter& xf = m.fighters[m.xrayTargetSlot];
-        float xx = xf.x + shakeX;
-        float xy = xf.y - 78.0f + shakeY;
+        float xx = toScreenX(xf.x);
+        float xy = toScreenY(xf.y - 78.0f);
         if (m.xrayFlashFrames % 3 == 0) {
             vita2d_draw_rectangle(0, 0, SCREEN_W, SCREEN_H, rgba(160, 240, 255, 65));
         }
-        vita2d_draw_fill_circle(xx, xy, 44.0f, rgba(90, 235, 255, 110));
+        vita2d_draw_fill_circle(xx, xy, 46.0f, rgba(90, 235, 255, 115));
         // Stylized X-Ray rib & spine impact flash
         vita2d_draw_line(xx, xy - 30.0f, xx, xy + 24.0f, rgba(220, 252, 255, 235));
         for (int rib = -2; rib <= 2; ++rib) {
@@ -1007,8 +1044,8 @@ void Renderer::drawMatch(const MatchState& m, int globalFrame) {
 
     // 12 Unique Character Finisher Cinematics!
     if (m.finisherSequenceFrames > 0) {
-        float fx = m.finisherTargetX + shakeX;
-        float fy = m.finisherTargetY + shakeY;
+        float fx = toScreenX(m.finisherTargetX);
+        float fy = toScreenY(m.finisherTargetY);
         int fProg = 145 - m.finisherSequenceFrames; // 0..145
         float pulse = 0.85f + 0.15f * std::sin(globalFrame * 0.4f);
 
@@ -1076,8 +1113,8 @@ void Renderer::drawMatch(const MatchState& m, int globalFrame) {
                 break;
             case 8: // MAYA: Blood Moon Ritual (Giant Blood Moon + Crimson Drain Beams)
                 {
-                    float mx = m.fighters[m.finisherWinnerSlot].x + shakeX;
-                    float my = m.fighters[m.finisherWinnerSlot].y - 80.0f + shakeY;
+                    float mx = toScreenX(m.fighters[m.finisherWinnerSlot].x);
+                    float my = toScreenY(m.fighters[m.finisherWinnerSlot].y - 80.0f);
                     vita2d_draw_fill_circle(fx, 130.0f, 64.0f * pulse, rgba(205, 20, 50, 195));
                     vita2d_draw_line(fx, fy - 80.0f, mx, my, rgba(255, 65, 95, 235));
                     vita2d_draw_line(fx, fy - 60.0f, mx, my - 10.0f, rgba(255, 130, 155, 215));
@@ -1117,16 +1154,26 @@ void Renderer::drawMatch(const MatchState& m, int globalFrame) {
         vita2d_draw_rectangle(SCREEN_W - 18.0f, 0, 18.0f, SCREEN_H, rgba(220, 20, 30, da));
     }
 
-    // --- TOP KOMBAT HUD WITH FRAMED FIGHTER PORTRAITS ---
+    // --- TOP MK9 STEEL-AND-BLOOD KOMBAT HUD WITH FRAMED HD FIGHTER PORTRAITS ---
     const CharacterDef& c1 = getCharacter(m.fighters[0].charId);
     const CharacterDef& c2 = getCharacter(m.fighters[1].charId);
 
-    // P1 & P2 HUD Portrait Avatars
-    fighterGfx_.drawBustPortrait(c1.id, 18.0f, 16.0f, 48.0f);
-    drawRectOutline(18.0f, 16.0f, 48.0f, 48.0f, 2.0f, c1.accentColor);
+    // Metallic Beveled Steel Header Backplate
+    vita2d_draw_rectangle(14.0f, 12.0f, 408.0f, 56.0f, rgba(20, 18, 26, 205));
+    drawRectOutline(14.0f, 12.0f, 408.0f, 56.0f, 1.8f, rgba(135, 135, 155));
+    vita2d_draw_rectangle(SCREEN_W - 422.0f, 12.0f, 408.0f, 56.0f, rgba(20, 18, 26, 205));
+    drawRectOutline(SCREEN_W - 422.0f, 12.0f, 408.0f, 56.0f, 1.8f, rgba(135, 135, 155));
 
-    fighterGfx_.drawBustPortrait(c2.id, SCREEN_W - 66.0f, 16.0f, 48.0f);
-    drawRectOutline(SCREEN_W - 66.0f, 16.0f, 48.0f, 48.0f, 2.0f, c2.accentColor);
+    // P1 & P2 HUD Portrait Avatars inside Steel Riveted Frames
+    fighterGfx_.drawBustPortrait(c1.id, 18.0f, 15.0f, 50.0f);
+    drawRectOutline(18.0f, 15.0f, 50.0f, 50.0f, 2.2f, c1.accentColor);
+    vita2d_draw_fill_circle(18.0f, 15.0f, 2.5f, rgba(205, 205, 220));
+    vita2d_draw_fill_circle(68.0f, 65.0f, 2.5f, rgba(205, 205, 220));
+
+    fighterGfx_.drawBustPortrait(c2.id, SCREEN_W - 68.0f, 15.0f, 50.0f);
+    drawRectOutline(SCREEN_W - 68.0f, 15.0f, 50.0f, 50.0f, 2.2f, c2.accentColor);
+    vita2d_draw_fill_circle(SCREEN_W - 68.0f, 15.0f, 2.5f, rgba(205, 205, 220));
+    vita2d_draw_fill_circle(SCREEN_W - 18.0f, 65.0f, 2.5f, rgba(205, 205, 220));
 
     float barW = 352.0f;
     float barH = 22.0f;

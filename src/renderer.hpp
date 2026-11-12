@@ -52,7 +52,7 @@ private:
     vita2d_texture* activeStageTex_ = nullptr;
     int activeStageId_ = -1;
     vita2d_texture* keyArtTex_ = nullptr;
-    vita2d_texture* storyArtTex_[4] = {nullptr, nullptr, nullptr, nullptr};
+    vita2d_texture* storyArtTex_[5] = {nullptr, nullptr, nullptr, nullptr, nullptr};
     FighterGfx fighterGfx_;
 
     void drawStoryIllustration(StoryArtStyle style, float x, float y, float w, float h, int globalFrame);
@@ -61,7 +61,7 @@ private:
     void drawTextCenteredShadow(float cx, float y, uint32_t color, float scale, const char* text);
     void drawRectOutline(float x, float y, float w, float h, float thickness, uint32_t color);
     void drawStatBar(float x, float y, float w, float h, float ratio, uint32_t fillCol, const char* label);
-    void drawStageBackdrop(int stageId, int globalFrame, bool dim);
+    void drawStageBackdrop(int stageId, int globalFrame, bool dim, float camX = SCREEN_W * 0.5f, float camZoom = 1.0f);
 };
 
 } // namespace vk

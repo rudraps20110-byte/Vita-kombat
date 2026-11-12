@@ -343,6 +343,26 @@ void executeSpecialPayload(MatchState& m, Fighter& attacker, Fighter& defender, 
     }
 }
 
+inline uint32_t defenderBloodColor(int charId) {
+    const CharacterDef& ch = getCharacter(charId);
+    if (ch.isCyber) return rgba(22, 24, 30, 225);     // dark hydraulic oil
+    if (charId == 6) return rgba(65, 210, 45, 220);   // Zahra toxic green blood
+    return rgba(165, 10, 22, 225);                    // dark crimson blood
+}
+
+void spawnFloorDecal(MatchState& m, float x, float w, uint32_t col, bool isScorch) {
+    FloorDecal d;
+    d.x = clampf(x + randFloat(-14.0f, 14.0f), STAGE_LEFT, STAGE_RIGHT);
+    d.width = w;
+    d.height = isScorch ? 7.0f : 5.0f;
+    d.color = col;
+    d.isScorch = isScorch;
+    if (m.decals.size() >= 48) {
+        m.decals.erase(m.decals.begin());
+    }
+    m.decals.push_back(d);
+}
+
 void applyHitToDefender(MatchState& m, Fighter& attacker, Fighter& defender,
                         int rawDamage, int chipDamage, int hitstun, int blockstun,
                         float pushbackX, float launchY, bool isLow, bool isOverhead,
@@ -499,9 +519,18 @@ void applyHitToDefender(MatchState& m, Fighter& attacker, Fighter& defender,
         audio.play(SoundId::HIT_LIGHT);
     }
 
-    // Impact + blood particles
-    spawnParticles(m, defender.x, defender.y - 78.0f, heavy ? 20 : 11, rgba(220, 20, 35), heavy ? 6.2f : 4.2f, true);
+    // Impact + realistic character-matched blood/oil/elemental splatter & persistent floor decals
+    uint32_t bloodCol = defenderBloodColor(defender.charId);
+    spawnParticles(m, defender.x, defender.y - 78.0f, heavy ? 22 : 12, bloodCol, heavy ? 6.8f : 4.6f, true);
     spawnParticles(m, defender.x, defender.y - 78.0f, 8, attCh.accentColor, 5.0f, false);
+    if (heavy || isFinishTarget || (randRange(0, 2) == 0)) {
+        spawnFloorDecal(m, defender.x, heavy ? randFloat(26.0f, 44.0f) : randFloat(14.0f, 24.0f),
+                        (bloodCol & 0x00FFFFFFu) | (195u << 24), false);
+    }
+    if (burnOnHit || freezeOnHit) {
+        spawnFloorDecal(m, defender.x, randFloat(34.0f, 52.0f),
+                        burnOnHit ? rgba(20, 12, 10, 200) : rgba(120, 225, 255, 130), true);
+    }
 }
 
 InputState computeCpuInput(const MatchState& m, Fighter& cpu, const Fighter& player) {
@@ -1133,12 +1162,29 @@ void updateMatch(MatchState& m, const InputState& p1Input, AudioEngine& audio) {
         if (m.finisherSequenceFrames == 110 || m.finisherSequenceFrames == 70 || m.finisherSequenceFrames == 35) {
             m.screenShakeFrames = 16;
             m.screenShakeMag = 8.0f;
+            int loserSlot = (m.finisherWinnerSlot == 0) ? 1 : 0;
+            uint32_t bCol = defenderBloodColor(m.fighters[loserSlot].charId);
             spawnShockwave(m, m.finisherTargetX, m.finisherTargetY - 78.0f, 135.0f, fCh.accentColor);
             spawnParticles(m, m.finisherTargetX, m.finisherTargetY - 78.0f, 26, fCh.auraColor, 7.5f, true);
-            spawnParticles(m, m.finisherTargetX, m.finisherTargetY - 78.0f, 18, rgba(220, 20, 35), 6.5f, true);
+            spawnParticles(m, m.finisherTargetX, m.finisherTargetY - 78.0f, 20, bCol, 7.2f, true);
+            spawnFloorDecal(m, m.finisherTargetX, randFloat(42.0f, 68.0f), (bCol & 0x00FFFFFFu) | (215u << 24), false);
             audio.play((m.finisherSequenceFrames == 70) ? SoundId::KO_BOOM : SoundId::HIT_HEAVY);
         }
     }
+
+    // MK9-style smooth camera tracking & dynamic proximity/cinematic zoom
+    float targetCamX = (m.fighters[0].x + m.fighters[1].x) * 0.5f;
+    float fighterDist = std::abs(m.fighters[0].x - m.fighters[1].x);
+    float targetZoom = clampf(1.10f - (fighterDist - 120.0f) * 0.00018f, 1.03f, 1.10f);
+    if (m.finisherSequenceFrames > 0) {
+        targetCamX = m.finisherTargetX;
+        targetZoom = 1.16f;
+    } else if (m.xrayFlashFrames > 0 && m.xrayTargetSlot >= 0 && m.xrayTargetSlot <= 1) {
+        targetCamX = m.fighters[m.xrayTargetSlot].x;
+        targetZoom = 1.15f;
+    }
+    m.cameraX += (clampf(targetCamX, 160.0f, SCREEN_W - 160.0f) - m.cameraX) * 0.12f;
+    m.cameraZoom += (targetZoom - m.cameraZoom) * 0.10f;
 
     // Particles always animate smoothly
     for (auto& pt : m.particles) {

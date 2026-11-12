@@ -57,6 +57,7 @@ private:
     TexPair pauldron_;
     TexPair cape_;
     TexPair scarf_;
+    TexPair damageWounds_;
 
     TexPair headgear_[12];
     TexPair weapon_[7];

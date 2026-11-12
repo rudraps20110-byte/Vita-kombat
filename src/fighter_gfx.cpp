@@ -2,6 +2,7 @@
 #include "characters.hpp"
 #include <algorithm>
 #include <cmath>
+#include <cstdio>
 #include <cstring>
 #include <vector>
 
@@ -10,6 +11,13 @@ namespace vk {
 namespace {
 
 constexpr float PI = 3.14159265359f;
+
+inline float hashGrain(int x, int y) {
+    uint32_t n = static_cast<uint32_t>(x) * 374761393u + static_cast<uint32_t>(y) * 668265263u;
+    n = (n ^ (n >> 13)) * 1274126177u;
+    n = n ^ (n >> 16);
+    return (static_cast<float>(n & 255u) / 255.0f) - 0.5f; // -0.5 .. +0.5
+}
 
 inline float clampf(float v, float lo, float hi) {
     return std::max(lo, std::min(hi, v));
@@ -125,11 +133,15 @@ struct Canvas {
                 }
 
                 float side = (rx * nx + ry * ny) / std::max(1.0f, rad);
-                uint32_t baseCol = shadeFn(t, side, dist / std::max(1.0f, rad));
-                // Smooth directional rim & ambient occlusion lighting
-                float light = side * 0.65f + (0.45f - t) * 0.28f;
-                float mul = 0.88f + clampf(light * 0.36f, -0.32f, 0.30f);
-                if (side > 0.68f && side < 0.88f) mul += 0.14f; // crisp rim specular
+                float normDist = dist / std::max(1.0f, rad);
+                uint32_t baseCol = shadeFn(t, side, normDist);
+                // Gritty MK9-style micro-grain leather/muscle/steel shading + deep AO + rim specular
+                float grain = hashGrain(pxX, py) * 0.13f;
+                float crossWeave = (((pxX + py) & 3) == 0) ? -0.035f : 0.015f;
+                float light = side * 0.72f + (0.40f - t) * 0.30f - normDist * 0.12f;
+                float mul = 0.86f + clampf(light * 0.42f, -0.38f, 0.32f) + grain + crossWeave;
+                if (side > 0.62f && side < 0.88f) mul += 0.18f; // crisp metallic rim specular
+                if (side < -0.55f) mul -= 0.08f; // deep shadow side
                 put(pxX, py, scaleColor(baseCol, mul));
             }
         }
@@ -168,8 +180,10 @@ struct Canvas {
                     put(pxX, py, packRgba(14, 11, 20, 255));
                     continue;
                 }
-                float light = -dx * 0.55f - dy * 0.55f;
-                float mul = 0.88f + clampf(light * 0.38f, -0.32f, 0.30f);
+                float grain = hashGrain(pxX, py) * 0.11f;
+                float light = -dx * 0.60f - dy * 0.58f;
+                float mul = 0.86f + clampf(light * 0.42f, -0.38f, 0.32f) + grain;
+                if (-dx > 0.55f && d > 0.55f) mul += 0.14f;
                 put(pxX, py, scaleColor(baseCol, mul));
             }
         }
@@ -273,17 +287,32 @@ Canvas buildTorsoCanvas(int physique) {
     return c;
 }
 
-// Layered martial-arts gi / battle cuirass with V-collar folds & contoured sash (NO boxy rectangles!)
+// Layered MK9-style armored cuirass with V-strap plates, metallic studs & contoured belt buckle
 Canvas buildChestPlateCanvas(int physique) {
     Canvas c(68, 66);
     float bulk = (physique == 1) ? 4.0f : (physique == 2 ? -2.0f : 0.0f);
-    // Left & right crossed lapels
-    c.drawShadedLimb(19.0f - bulk * 0.4f, 15.0f, 8.5f + bulk * 0.3f, 32.0f, 48.0f, 6.5f, 1.5f, packRgba(235, 235, 242));
-    c.drawShadedLimb(49.0f + bulk * 0.4f, 15.0f, 8.5f + bulk * 0.3f, 36.0f, 48.0f, 6.5f, 1.5f, packRgba(218, 218, 228));
-    // Sculpted center cuirass / chest plate
-    c.drawShadedEllipse(34.0f, 27.0f, 13.0f + bulk * 0.5f, 13.5f, packRgba(242, 242, 250));
-    // Contoured curved martial-arts belt sash
-    c.drawShadedLimb(17.0f - bulk * 0.3f, 52.0f, 5.2f, 51.0f + bulk * 0.3f, 52.0f, 5.2f, -2.5f, packRgba(210, 210, 222));
+    // Left & right crossed leather/armor lapels
+    c.drawShadedLimb(19.0f - bulk * 0.4f, 15.0f, 8.8f + bulk * 0.3f, 32.0f, 48.0f, 6.8f, 1.5f, packRgba(235, 235, 242));
+    c.drawShadedLimb(49.0f + bulk * 0.4f, 15.0f, 8.8f + bulk * 0.3f, 36.0f, 48.0f, 6.8f, 1.5f, packRgba(214, 214, 224));
+    // Sculpted center cuirass / chest plate + sternum steel crest
+    c.drawShadedEllipse(34.0f, 27.0f, 13.5f + bulk * 0.5f, 13.5f, packRgba(242, 242, 250));
+    c.drawShadedEllipse(34.0f, 27.0f, 4.8f, 5.2f, packRgba(185, 190, 205), 1.2f);
+    // Shoulder rivets
+    c.drawShadedEllipse(22.0f - bulk * 0.3f, 18.0f, 2.4f, 2.4f, packRgba(250, 250, 255), 0.9f);
+    c.drawShadedEllipse(46.0f + bulk * 0.3f, 18.0f, 2.4f, 2.4f, packRgba(250, 250, 255), 0.9f);
+    // Heavy contoured armored belt & metallic center buckle
+    c.drawShadedLimb(16.5f - bulk * 0.3f, 52.0f, 5.8f, 51.5f + bulk * 0.3f, 52.0f, 5.8f, -2.5f, packRgba(205, 205, 218));
+    c.drawShadedEllipse(34.0f, 51.0f, 6.2f, 5.2f, packRgba(245, 245, 252), 1.4f);
+    return c;
+}
+
+Canvas buildDamageWoundsCanvas() {
+    Canvas c(68, 74);
+    // Slash lacerations & torn armor grime overlay
+    c.drawShadedLimb(20.0f, 19.0f, 2.4f, 45.0f, 37.0f, 1.4f, 0.4f, packRgba(235, 235, 240), 0.8f);
+    c.drawShadedLimb(23.0f, 25.0f, 2.0f, 47.0f, 42.0f, 1.2f, -0.3f, packRgba(210, 210, 220), 0.6f);
+    c.drawShadedLimb(42.0f, 38.0f, 1.8f, 26.0f, 56.0f, 1.2f, 0.3f, packRgba(225, 225, 235), 0.7f);
+    c.drawShadedEllipse(31.0f, 34.0f, 5.5f, 4.2f, packRgba(175, 175, 185), 0.6f);
     return c;
 }
 
@@ -539,21 +568,26 @@ vita2d_texture* buildPortraitTex(int charId,
                                  const Canvas& head, const Canvas& pauldron,
                                  const Canvas& headgear) {
     const CharacterDef& ch = getCharacter(charId);
-    Canvas p(112, 112);
+    constexpr int PSZ = 160;
+    Canvas p(PSZ, PSZ);
 
-    for (int y = 0; y < 112; ++y) {
-        for (int x = 0; x < 112; ++x) {
-            float dx = (x - 56.0f) / 56.0f;
-            float dy = (y - 52.0f) / 56.0f;
+    for (int y = 0; y < PSZ; ++y) {
+        for (int x = 0; x < PSZ; ++x) {
+            float dx = (x - PSZ * 0.5f) / (PSZ * 0.5f);
+            float dy = (y - PSZ * 0.46f) / (PSZ * 0.5f);
             float d = std::sqrt(dx * dx + dy * dy);
-            float g = clampf(1.0f - d * 1.02f, 0.0f, 1.0f);
-            float streak = (((x + y) % 14) < 2) ? 0.14f : 0.0f;
-            uint32_t bg = rgba(14, 12, 22, 255);
-            uint32_t glow = scaleColor(ch.auraColor, g * 0.78f + streak * g);
-            uint8_t r = static_cast<uint8_t>(std::min<uint32_t>(255u, (bg & 0xFFu) + (glow & 0xFFu)));
-            uint8_t gr = static_cast<uint8_t>(std::min<uint32_t>(255u, ((bg >> 8) & 0xFFu) + ((glow >> 8) & 0xFFu)));
-            uint8_t b = static_cast<uint8_t>(std::min<uint32_t>(255u, ((bg >> 16) & 0xFFu) + ((glow >> 16) & 0xFFu)));
-            p.px[y * 112 + x] = rgba(r, gr, b, 255);
+            float g = clampf(1.0f - d * 0.98f, 0.0f, 1.0f);
+            float streak = (((x + y) % 16) < 2) ? 0.16f : 0.0f;
+            float grit = hashGrain(x, y) * 14.0f;
+            uint32_t bg = rgba(10, 8, 16, 255);
+            uint32_t glow = scaleColor(ch.auraColor, g * 0.85f + streak * g);
+            int rBase = static_cast<int>((bg & 0xFFu) + (glow & 0xFFu) + grit);
+            int gBase = static_cast<int>(((bg >> 8) & 0xFFu) + ((glow >> 8) & 0xFFu) + grit);
+            int bBase = static_cast<int>(((bg >> 16) & 0xFFu) + ((glow >> 16) & 0xFFu) + grit);
+            uint8_t r = static_cast<uint8_t>(clampf(static_cast<float>(rBase), 0.0f, 255.0f));
+            uint8_t gr = static_cast<uint8_t>(clampf(static_cast<float>(gBase), 0.0f, 255.0f));
+            uint8_t b = static_cast<uint8_t>(clampf(static_cast<float>(bBase), 0.0f, 255.0f));
+            p.px[y * PSZ + x] = rgba(r, gr, b, 255);
         }
     }
 
@@ -570,14 +604,16 @@ vita2d_texture* buildPortraitTex(int charId,
     bust.compositeOver(head, 31, 20, ch.skinColor);
     bust.compositeOver(headgear, 22, 17, 0xFFFFFFFF);
 
-    for (int y = 0; y < 112; ++y) {
-        for (int x = 0; x < 112; ++x) {
-            int sx = static_cast<int>(56.0f + (x - 56.0f) / 1.38f);
-            int sy = static_cast<int>(48.0f + (y - 54.0f) / 1.38f);
+    for (int y = 0; y < PSZ; ++y) {
+        for (int x = 0; x < PSZ; ++x) {
+            int sx = static_cast<int>(56.0f + (x - PSZ * 0.5f) / 1.95f);
+            int sy = static_cast<int>(48.0f + (y - PSZ * 0.48f) / 1.95f);
             if (sx >= 0 && sx < 112 && sy >= 0 && sy < 112) {
                 uint32_t sp = bust.px[sy * 112 + sx];
                 if (((sp >> 24) & 0xFF) > 0) {
-                    p.px[y * 112 + x] = alphaBlend(p.px[y * 112 + x], sp);
+                    // Moody dark vignette toward edges
+                    float vig = clampf(1.05f - std::abs(x - PSZ * 0.5f) / (PSZ * 0.55f) * 0.30f, 0.72f, 1.0f);
+                    p.px[y * PSZ + x] = alphaBlend(p.px[y * PSZ + x], scaleColor(sp, vig));
                 }
             }
         }
@@ -651,13 +687,19 @@ bool FighterGfx::init() {
     pauldron_ = uploadPair(cPauldron);
     cape_ = uploadPair(cCape);
     scarf_ = uploadPair(cScarf);
+    damageWounds_ = uploadPair(buildDamageWoundsCanvas());
 
     for (int i = 0; i < CHARACTER_COUNT; ++i) {
         const CharacterDef& ch = getCharacter(i);
         int phys = getPhysiqueType(i);
         Canvas cHg = buildHeadgearCanvas(ch.headgear, ch.primaryColor, ch.secondaryColor, ch.accentColor);
         headgear_[i] = uploadPair(cHg);
-        bustPortraits_[i] = buildPortraitTex(i, cTorso[phys], cChest[phys], cHead, cPauldron, cHg);
+        char portraitPath[96];
+        std::snprintf(portraitPath, sizeof(portraitPath), "app0:assets/portraits/char_%d.png", i);
+        bustPortraits_[i] = vita2d_load_PNG_file(portraitPath);
+        if (!bustPortraits_[i]) {
+            bustPortraits_[i] = buildPortraitTex(i, cTorso[phys], cChest[phys], cHead, cPauldron, cHg);
+        }
     }
 
     for (int w = 1; w < 7; ++w) {
@@ -691,6 +733,7 @@ void FighterGfx::shutdown() {
     freePair(pauldron_);
     freePair(cape_);
     freePair(scarf_);
+    freePair(damageWounds_);
 
     for (int i = 0; i < CHARACTER_COUNT; ++i) {
         freePair(headgear_[i]);
@@ -1076,9 +1119,18 @@ void FighterGfx::drawFighter(const Fighter& f, float baseX, float baseY, int glo
     float bShinAng = bLegAng + pose.bKneeAngle;
     drawPart(shinBoot_, bKneeX, bKneeY, bShinAng, 18.0f, 9.0f, scaleColor(cPrim, 0.86f));
 
-    // Organic Torso, Armor & Tabard
+    // Organic Torso, Armor & Tabard + MK9 Battle Damage Overlays
     drawPart(torsoBase_[phys], hipX, hipY, torsoWorldAng, 34.0f, 58.0f, cSec);
     drawPart(chestPlate_[phys], hipX, hipY, torsoWorldAng, 34.0f, 56.0f, cPrim);
+    if (!isGhost && f.hp < f.maxHp * 0.55f) {
+        uint32_t woundCol = ch.isCyber ? rgba(25, 22, 28, 220) :
+                            ((f.charId == 6) ? rgba(85, 225, 55, 210) : rgba(165, 12, 24, 225));
+        drawPart(damageWounds_, hipX, hipY, torsoWorldAng, 34.0f, 58.0f, woundCol);
+        if (f.hp < f.maxHp * 0.25f) {
+            // Severe low-HP torn chest fracture + dripping wound particle
+            drawPart(damageWounds_, hipX + dir * 2.0f, hipY - 3.0f, torsoWorldAng + 0.14f, 34.0f, 58.0f, scaleColor(woundCol, 0.72f));
+        }
+    }
     drawPart(waistTabard_, hipX, hipY, totalRoll + pose.torsoAngle * 0.4f, 29.0f, 7.0f, cAcc);
 
     if (ch.isCyber && !isGhost) {

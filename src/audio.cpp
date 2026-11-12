@@ -340,13 +340,17 @@ void AudioEngine::play(SoundId id) {
             enqueueVoice(440.0f, 880.0f, 0.11f, 0.24f, 0.0f, 0.6f);
             break;
         case SoundId::HIT_LIGHT:
-            enqueueVoice(190.0f, 70.0f, 0.09f, 0.36f, 0.65f, 0.2f);
+            enqueueVoice(210.0f, 65.0f, 0.08f, 0.34f, 0.72f, 0.15f);
             break;
         case SoundId::HIT_HEAVY:
-            enqueueVoice(150.0f, 42.0f, 0.19f, 0.50f, 0.72f, 0.3f);
+            // Layered sub-bass chest thump + bone-crack transient
+            enqueueVoice(135.0f, 36.0f, 0.22f, 0.48f, 0.25f, 0.20f);
+            enqueueVoice(920.0f, 180.0f, 0.06f, 0.26f, 0.92f, 0.35f);
             break;
         case SoundId::BLOCK:
-            enqueueVoice(720.0f, 360.0f, 0.08f, 0.28f, 0.25f, 0.8f);
+            // Steel blade/gauntlet clang
+            enqueueVoice(980.0f, 620.0f, 0.09f, 0.24f, 0.15f, 0.85f);
+            enqueueVoice(460.0f, 240.0f, 0.07f, 0.20f, 0.35f, 0.45f);
             break;
         case SoundId::WHOOSH:
             enqueueVoice(340.0f, 140.0f, 0.07f, 0.18f, 0.85f, 0.0f);
@@ -361,13 +365,16 @@ void AudioEngine::play(SoundId id) {
             enqueueVoice(420.0f, 55.0f, 0.28f, 0.44f, 0.80f, 0.4f);
             break;
         case SoundId::UPPERCUT:
-            enqueueVoice(140.0f, 480.0f, 0.22f, 0.46f, 0.50f, 0.3f);
+            enqueueVoice(120.0f, 480.0f, 0.24f, 0.44f, 0.45f, 0.25f);
+            enqueueVoice(680.0f, 220.0f, 0.09f, 0.22f, 0.85f, 0.30f);
             break;
         case SoundId::SUPER_FLASH:
-            enqueueVoice(220.0f, 1100.0f, 0.35f, 0.40f, 0.25f, 0.7f);
+            enqueueVoice(180.0f, 980.0f, 0.38f, 0.36f, 0.25f, 0.70f);
+            enqueueVoice(95.0f, 38.0f, 0.42f, 0.34f, 0.10f, 0.20f);
             break;
         case SoundId::KO_BOOM:
-            enqueueVoice(120.0f, 28.0f, 0.55f, 0.58f, 0.78f, 0.35f);
+            enqueueVoice(105.0f, 26.0f, 0.62f, 0.52f, 0.40f, 0.25f);
+            enqueueVoice(780.0f, 90.0f, 0.30f, 0.28f, 0.90f, 0.35f);
             break;
     }
 }

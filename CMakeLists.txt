@@ -71,5 +71,11 @@ vita_create_vpk(${PROJECT_NAME}.vpk ${VITA_TITLEID} ${PROJECT_NAME}.self
     FILE ${CMAKE_CURRENT_SOURCE_DIR}/assets/story/art_1.png assets/story/art_1.png
     FILE ${CMAKE_CURRENT_SOURCE_DIR}/assets/story/art_2.png assets/story/art_2.png
     FILE ${CMAKE_CURRENT_SOURCE_DIR}/assets/story/art_3.png assets/story/art_3.png
+    FILE ${CMAKE_CURRENT_SOURCE_DIR}/assets/story/art_4.png assets/story/art_4.png
+    FILE ${CMAKE_CURRENT_SOURCE_DIR}/assets/portraits/char_0.png assets/portraits/char_0.png
+    FILE ${CMAKE_CURRENT_SOURCE_DIR}/assets/portraits/char_1.png assets/portraits/char_1.png
+    FILE ${CMAKE_CURRENT_SOURCE_DIR}/assets/portraits/char_2.png assets/portraits/char_2.png
+    FILE ${CMAKE_CURRENT_SOURCE_DIR}/assets/portraits/char_3.png assets/portraits/char_3.png
+    FILE ${CMAKE_CURRENT_SOURCE_DIR}/assets/portraits/char_4.png assets/portraits/char_4.png
 )
 

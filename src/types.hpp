@@ -266,6 +266,14 @@ struct AcidPool {
     uint32_t color = rgba(75, 245, 50);
 };
 
+struct FloorDecal {
+    float x = 0.0f;
+    float width = 28.0f;
+    float height = 6.0f;
+    uint32_t color = rgba(125, 10, 18, 210);
+    bool isScorch = false;
+};
+
 struct Fighter {
     int slot = 0;
     int charId = 0;
