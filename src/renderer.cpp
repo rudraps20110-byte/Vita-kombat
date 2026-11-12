@@ -448,10 +448,30 @@ void Renderer::drawStageSelect(const UiState& ui) {
         float cx = startX + col * (cw + gap);
         float cy = 88.0f + row * 190.0f;
 
-        vita2d_draw_rectangle(cx, cy, cw, chH, rgba(16, 14, 24, 230));
+        vita2d_draw_rectangle(cx, cy, cw, chH, rgba(16, 14, 24, 232));
         vita2d_draw_rectangle(cx + 8.0f, cy + 8.0f, cw - 16.0f, 44.0f, st.skyTop);
         vita2d_draw_rectangle(cx + 8.0f, cy + 52.0f, cw - 16.0f, 20.0f, st.skyBottom);
-        vita2d_draw_fill_circle(cx + cw * 0.5f, cy + 48.0f, 18.0f, withAlpha(st.accentColor, 175));
+        vita2d_draw_fill_circle(cx + cw * 0.5f, cy + 44.0f, 19.0f, withAlpha(st.accentColor, 185));
+        if (i == 0) {
+            vita2d_draw_rectangle(cx + 42.0f, cy + 48.0f, 36.0f, 24.0f, rgba(35, 18, 14));
+            vita2d_draw_rectangle(cx + cw - 78.0f, cy + 44.0f, 34.0f, 28.0f, rgba(35, 18, 14));
+        } else if (i == 1) {
+            vita2d_draw_line(cx + 20.0f, cy + 20.0f, cx + 90.0f, cy + 36.0f, rgba(110, 240, 255, 180));
+            vita2d_draw_line(cx + 90.0f, cy + 36.0f, cx + 170.0f, cy + 18.0f, rgba(110, 240, 255, 180));
+        } else if (i == 2) {
+            vita2d_draw_line(cx + 100.0f, cy + 10.0f, cx + 88.0f, cy + 40.0f, rgba(210, 235, 255, 230));
+            vita2d_draw_line(cx + 88.0f, cy + 40.0f, cx + 106.0f, cy + 66.0f, rgba(210, 235, 255, 230));
+        } else if (i == 4) {
+            vita2d_draw_rectangle(cx + cw * 0.5f - 28.0f, cy + 38.0f, 56.0f, 6.0f, rgba(25, 14, 18));
+            vita2d_draw_rectangle(cx + cw * 0.5f - 20.0f, cy + 44.0f, 6.0f, 26.0f, rgba(25, 14, 18));
+            vita2d_draw_rectangle(cx + cw * 0.5f + 14.0f, cy + 44.0f, 6.0f, 26.0f, rgba(25, 14, 18));
+        } else if (i == 5) {
+            vita2d_draw_line(cx + 16.0f, cy + 20.0f, cx + cw - 16.0f, cy + 20.0f, rgba(255, 65, 85, 175));
+            vita2d_draw_line(cx + 16.0f, cy + 56.0f, cx + cw - 16.0f, cy + 56.0f, rgba(255, 65, 85, 175));
+        } else if (i == 6) {
+            vita2d_draw_line(cx + cw * 0.5f - 30.0f, cy + 10.0f, cx + cw * 0.5f, cy + 68.0f, rgba(255, 235, 145, 140));
+            vita2d_draw_line(cx + cw * 0.5f + 30.0f, cy + 10.0f, cx + cw * 0.5f, cy + 68.0f, rgba(255, 235, 145, 140));
+        }
         vita2d_draw_rectangle(cx + 8.0f, cy + 68.0f, cw - 16.0f, 28.0f, st.floorColor);
         vita2d_draw_rectangle(cx + 8.0f, cy + 66.0f, cw - 16.0f, 4.0f, st.accentColor);
 
@@ -553,23 +573,21 @@ void Renderer::drawMatch(const MatchState& m, int globalFrame) {
         }
     }
 
-    // Projectiles & Special FX
+    // Projectiles & Special FX (custom shaded rotating/directional textures!)
     for (const auto& pr : m.projectiles) {
         if (!pr.active) continue;
         float px = pr.x + shakeX;
         float py = pr.y + shakeY;
-        if (pr.isPillar) {
-            vita2d_draw_rectangle(px - pr.radius, py - 95.0f, pr.radius * 2.0f, 165.0f, withAlpha(pr.color, 185));
-            vita2d_draw_rectangle(px - pr.radius * 0.5f, py - 95.0f, pr.radius, 165.0f, withAlpha(pr.coreColor, 240));
-        } else if (pr.effectType == SpecialEffectType::TEMPEST_TORNADO) {
-            for (int r = 0; r < 4; ++r) {
-                float rw = pr.radius * (0.45f + r * 0.25f);
-                vita2d_draw_rectangle(px - rw, py + 24.0f - r * 24.0f, rw * 2.0f, 16.0f, withAlpha(pr.color, 190));
-            }
-        } else {
-            vita2d_draw_fill_circle(px, py, pr.radius * 1.35f, withAlpha(pr.color, 145));
-            vita2d_draw_fill_circle(px, py, pr.radius * 0.78f, pr.coreColor);
-            vita2d_draw_fill_circle(px, py, pr.radius * 0.35f, rgba(255, 255, 255, 235));
+        fighterGfx_.drawProjectile(pr, px, py, globalFrame);
+    }
+
+    // Starburst Hit-Spark Rays during impact hitstop
+    if (m.hitstopFrames > 0) {
+        float hx = (m.fighters[0].x + m.fighters[1].x) * 0.5f + shakeX;
+        float hy = std::min(m.fighters[0].y, m.fighters[1].y) - 80.0f + shakeY;
+        for (int ray = 0; ray < 8; ++ray) {
+            float ang = (ray * 3.14159f) / 4.0f + globalFrame * 0.2f;
+            vita2d_draw_line(hx, hy, hx + std::cos(ang) * 34.0f, hy + std::sin(ang) * 34.0f, rgba(255, 240, 140, 235));
         }
     }
 
@@ -578,6 +596,17 @@ void Renderer::drawMatch(const MatchState& m, int globalFrame) {
         if (!pt.active) continue;
         uint8_t a = static_cast<uint8_t>(255.0f * (static_cast<float>(pt.life) / static_cast<float>(pt.maxLife)));
         vita2d_draw_fill_circle(pt.x + shakeX, pt.y + shakeY, pt.size, withAlpha(pt.color, a));
+    }
+
+    // Cinematic letterbox bars during Super Flash / Finish Him, plus Low-HP Danger Vignette
+    if (m.superFlashFrames > 0 || m.finishHimActive) {
+        vita2d_draw_rectangle(0, 0, SCREEN_W, 14.0f, rgba(0, 0, 0, 220));
+        vita2d_draw_rectangle(0, SCREEN_H - 14.0f, SCREEN_W, 14.0f, rgba(0, 0, 0, 220));
+    }
+    if (m.fighters[0].hp > 0 && m.fighters[0].hp * 4 <= m.fighters[0].maxHp) {
+        uint8_t da = static_cast<uint8_t>(42.0f + 35.0f * std::sin(globalFrame * 0.22f));
+        vita2d_draw_rectangle(0, 0, 18.0f, SCREEN_H, rgba(220, 20, 30, da));
+        vita2d_draw_rectangle(SCREEN_W - 18.0f, 0, 18.0f, SCREEN_H, rgba(220, 20, 30, da));
     }
 
     // --- TOP KOMBAT HUD WITH FRAMED FIGHTER PORTRAITS ---
@@ -718,36 +747,55 @@ void Renderer::drawPauseOverlay(const UiState& ui) {
 
 void Renderer::drawMoveListOverlay(const MatchState& m) {
     const CharacterDef& c1 = getCharacter(m.fighters[0].charId);
-    vita2d_draw_rectangle(0, 0, SCREEN_W, SCREEN_H, rgba(0, 0, 0, 205));
-    vita2d_draw_rectangle(60.0f, 44.0f, 840.0f, 456.0f, rgba(20, 16, 28, 245));
-    drawRectOutline(60.0f, 44.0f, 840.0f, 456.0f, 2.5f, c1.accentColor);
+    vita2d_draw_rectangle(0, 0, SCREEN_W, SCREEN_H, rgba(0, 0, 0, 210));
+    vita2d_draw_rectangle(56.0f, 38.0f, 848.0f, 468.0f, rgba(18, 14, 28, 245));
+    drawRectOutline(56.0f, 38.0f, 848.0f, 468.0f, 2.5f, c1.accentColor);
+
+    // Header portrait + colored PlayStation button legend
+    fighterGfx_.drawBustPortrait(c1.id, 74.0f, 52.0f, 56.0f);
+    drawRectOutline(74.0f, 52.0f, 56.0f, 56.0f, 2.0f, c1.accentColor);
 
     char titleBuf[96];
     std::snprintf(titleBuf, sizeof(titleBuf), "%s - KOMBAT MOVE LIST", c1.name);
-    drawTextCenteredShadow(SCREEN_W * 0.5f, 82.0f, c1.accentColor, 1.35f, titleBuf);
+    drawTextShadow(146.0f, 78.0f, c1.accentColor, 1.35f, titleBuf);
+    drawTextShadow(146.0f, 102.0f, rgba(205, 210, 225), 0.80f, c1.title);
 
-    drawTextShadow(92.0f, 124.0f, rgba(255, 205, 75), 0.98f, "BASIC ATTACKS & DEFENSE:");
-    drawTextShadow(92.0f, 152.0f, rgba(235, 235, 245), 0.85f, "Square (Quick Punch)   |   Triangle (Heavy Strike)   |   Cross (Kick)   |   Circle (Roundhouse)");
-    drawTextShadow(92.0f, 178.0f, rgba(235, 235, 245), 0.85f, "Down + Triangle: Uppercut Launcher   |   Down + Circle: Low Sweep   |   Fwd + Square (close): Throw");
-    drawTextShadow(92.0f, 204.0f, rgba(235, 235, 245), 0.85f, "Hold L: High Block   |   Down + L: Low Block   |   R + Left/Right (or double-tap): Dash");
+    auto drawBtnIcon = [&](float bx, float by, uint32_t col, const char* lbl) {
+        vita2d_draw_fill_circle(bx, by, 10.0f, rgba(28, 26, 38));
+        vita2d_draw_fill_circle(bx, by, 8.5f, col);
+        drawTextCentered(bx, by + 5.0f, rgba(15, 12, 20), 0.72f, lbl);
+    };
+    drawBtnIcon(640.0f, 76.0f, rgba(235, 130, 195), "S");
+    drawTextShadow(656.0f, 82.0f, rgba(235, 190, 225), 0.75f, "Square");
+    drawBtnIcon(720.0f, 76.0f, rgba(95, 220, 145), "T");
+    drawTextShadow(736.0f, 82.0f, rgba(175, 245, 200), 0.75f, "Triangle");
+    drawBtnIcon(804.0f, 76.0f, rgba(105, 185, 255), "X");
+    drawTextShadow(820.0f, 82.0f, rgba(180, 225, 255), 0.75f, "Cross");
+    drawBtnIcon(640.0f, 102.0f, rgba(245, 95, 105), "O");
+    drawTextShadow(656.0f, 108.0f, rgba(255, 180, 185), 0.75f, "Circle");
 
-    drawTextShadow(92.0f, 246.0f, rgba(255, 205, 75), 0.98f, "UNIQUE SPECIAL ABILITIES & FINISHER:");
+    drawTextShadow(82.0f, 136.0f, rgba(255, 205, 75), 0.96f, "BASIC ATTACKS & DEFENSE:");
+    drawTextShadow(82.0f, 162.0f, rgba(235, 235, 245), 0.84f, "Square (Quick Punch)   |   Triangle (Heavy Strike)   |   Cross (Kick)   |   Circle (Roundhouse)");
+    drawTextShadow(82.0f, 188.0f, rgba(235, 235, 245), 0.84f, "Down + Triangle: Uppercut Launcher   |   Down + Circle: Low Sweep   |   Fwd + Square (close): Throw");
+    drawTextShadow(82.0f, 214.0f, rgba(235, 235, 245), 0.84f, "Hold L: High Block   |   Down + L: Low Block   |   R + Left/Right (or double-tap): Dash");
+
+    drawTextShadow(82.0f, 254.0f, rgba(255, 205, 75), 0.96f, "UNIQUE SPECIAL ABILITIES & FINISHER:");
     char sp1[160], sp2[160], sup[160], fin[160];
     std::snprintf(sp1, sizeof(sp1), "%s  [%s]  -  %s", c1.special1Name, c1.special1Input, c1.special1Desc);
     std::snprintf(sp2, sizeof(sp2), "%s  [%s]  -  %s", c1.special2Name, c1.special2Input, c1.special2Desc);
     std::snprintf(sup, sizeof(sup), "SUPER ART: %s  [L + R when Meter is 100%%]", c1.superName);
     std::snprintf(fin, sizeof(fin), "FINISHER: %s  [R + Circle during FINISH HIM!]", c1.finisherName);
 
-    drawTextShadow(92.0f, 274.0f, rgba(160, 235, 255), 0.85f, sp1);
-    drawTextShadow(92.0f, 300.0f, rgba(160, 235, 255), 0.85f, sp2);
-    drawTextShadow(92.0f, 326.0f, rgba(255, 225, 110), 0.85f, sup);
-    drawTextShadow(92.0f, 352.0f, rgba(255, 95, 105), 0.85f, fin);
+    drawTextShadow(82.0f, 282.0f, rgba(160, 235, 255), 0.84f, sp1);
+    drawTextShadow(82.0f, 308.0f, rgba(160, 235, 255), 0.84f, sp2);
+    drawTextShadow(82.0f, 334.0f, rgba(255, 225, 110), 0.84f, sup);
+    drawTextShadow(82.0f, 360.0f, rgba(255, 95, 105), 0.84f, fin);
 
-    drawTextShadow(92.0f, 396.0f, rgba(255, 205, 75), 0.98f, "KOMBO CHAINS (CANCEL ON HIT!):");
-    drawTextShadow(92.0f, 424.0f, rgba(180, 255, 185), 0.85f, "1) Square -> Triangle -> R+Square (or R+Triangle)");
-    drawTextShadow(92.0f, 448.0f, rgba(180, 255, 185), 0.85f, "2) Down+Triangle (Uppercut Launch) -> Jump Forward + Cross -> R+Square!");
+    drawTextShadow(82.0f, 402.0f, rgba(255, 205, 75), 0.96f, "KOMBO CHAINS (CANCEL ON HIT!):");
+    drawTextShadow(82.0f, 430.0f, rgba(180, 255, 185), 0.84f, "1) Square -> Triangle -> R+Square (or R+Triangle)");
+    drawTextShadow(82.0f, 454.0f, rgba(180, 255, 185), 0.84f, "2) Down+Triangle (Uppercut Launch) -> Jump Forward + Cross -> R+Square!");
 
-    drawTextCenteredShadow(SCREEN_W * 0.5f, 484.0f, rgba(220, 220, 235), 0.88f, "Press Circle (O) or START to Return");
+    drawTextCenteredShadow(SCREEN_W * 0.5f, 492.0f, rgba(220, 220, 235), 0.88f, "Press Circle (O) or START to Return");
 }
 
 void Renderer::drawMatchOverScreen(const MatchState& m, const UiState& ui) {

@@ -431,15 +431,16 @@ vita2d_texture* buildPortraitTex(int charId,
     const CharacterDef& ch = getCharacter(charId);
     Canvas p(112, 112);
 
-    // Rich dark radial elemental background glow
+    // Rich dark radial elemental background glow + diagonal energy streaks
     for (int y = 0; y < 112; ++y) {
         for (int x = 0; x < 112; ++x) {
             float dx = (x - 56.0f) / 56.0f;
             float dy = (y - 52.0f) / 56.0f;
             float d = std::sqrt(dx * dx + dy * dy);
-            float g = clampf(1.0f - d * 1.05f, 0.0f, 1.0f);
-            uint32_t bg = rgba(16, 14, 24, 255);
-            uint32_t glow = scaleColor(ch.auraColor, g * 0.72f);
+            float g = clampf(1.0f - d * 1.02f, 0.0f, 1.0f);
+            float streak = (((x + y) % 14) < 2) ? 0.14f : 0.0f;
+            uint32_t bg = rgba(14, 12, 22, 255);
+            uint32_t glow = scaleColor(ch.auraColor, g * 0.78f + streak * g);
             uint8_t r = static_cast<uint8_t>(std::min(255, (bg & 0xFF) + (glow & 0xFF)));
             uint8_t gr = static_cast<uint8_t>(std::min(255, ((bg >> 8) & 0xFF) + ((glow >> 8) & 0xFF)));
             uint8_t b = static_cast<uint8_t>(std::min(255, ((bg >> 16) & 0xFF) + ((glow >> 16) & 0xFF)));
@@ -451,6 +452,9 @@ vita2d_texture* buildPortraitTex(int charId,
     Canvas bust(112, 112);
     bust.compositeOver(torso, 24, 54, ch.secondaryColor);
     bust.compositeOver(chest, 24, 54, ch.primaryColor);
+    if (ch.isCyber) {
+        bust.drawShadedEllipse(56, 76, 5.5f, 5.5f, ch.accentColor, 1.2f);
+    }
     if (ch.hasPauldrons) {
         bust.compositeOver(pauldron, 14, 58, ch.accentColor);
         bust.compositeOver(pauldron, 60, 58, ch.accentColor);
@@ -473,6 +477,41 @@ vita2d_texture* buildPortraitTex(int charId,
     }
 
     return uploadCanvas(p);
+}
+
+Canvas buildCometCanvas() {
+    Canvas c(64, 40);
+    // Directional energy comet + glowing core (faces right, tinted by projectile color)
+    c.drawShadedLimb(10, 20, 3.0f, 44, 20, 14.0f, 2.0f, packRgba(235, 235, 245), 1.5f);
+    c.drawShadedLimb(16, 12, 2.0f, 40, 14, 6.0f, 0.0f, packRgba(255, 255, 255), 0.0f);
+    c.drawShadedLimb(16, 28, 2.0f, 40, 26, 6.0f, 0.0f, packRgba(255, 255, 255), 0.0f);
+    c.drawShadedEllipse(44, 20, 11.0f, 11.0f, packRgba(255, 255, 255), 1.0f);
+    return c;
+}
+
+Canvas buildScytheProjCanvas() {
+    Canvas c(56, 56);
+    c.drawShadedLimb(10, 44, 3.5f, 44, 12, 3.5f, 0.0f, packRgba(150, 130, 185), 1.8f);
+    c.drawBladeSegment(42, 10, 7.0f, 12, 18, 2.0f, packRgba(255, 255, 255), packRgba(225, 190, 255));
+    c.drawBladeSegment(12, 42, 6.0f, 44, 46, 2.0f, packRgba(255, 255, 255), packRgba(225, 190, 255));
+    return c;
+}
+
+Canvas buildShurikenCanvas() {
+    Canvas c(48, 48);
+    c.drawBladeSegment(24, 4, 4.5f, 24, 44, 4.5f, packRgba(255, 255, 255), packRgba(185, 235, 255));
+    c.drawBladeSegment(4, 24, 4.5f, 44, 24, 4.5f, packRgba(255, 255, 255), packRgba(185, 235, 255));
+    c.drawShadedEllipse(24, 24, 6.0f, 6.0f, packRgba(255, 255, 255), 1.5f);
+    return c;
+}
+
+Canvas buildPillarCanvas() {
+    Canvas c(64, 144);
+    c.drawShadedLimb(32, 138, 22.0f, 32, 18, 7.0f, 3.0f, packRgba(235, 235, 245), 2.0f);
+    c.drawShadedLimb(16, 136, 10.0f, 12, 48, 3.0f, 1.0f, packRgba(255, 255, 255), 1.5f);
+    c.drawShadedLimb(48, 136, 10.0f, 52, 48, 3.0f, 1.0f, packRgba(255, 255, 255), 1.5f);
+    c.drawShadedLimb(32, 136, 12.0f, 32, 26, 3.0f, 0.0f, packRgba(255, 255, 255), 0.0f);
+    return c;
 }
 
 } // namespace
@@ -515,10 +554,19 @@ bool FighterGfx::init() {
         weapon_[w] = uploadPair(buildWeaponCanvas(static_cast<WeaponStyle>(w)));
     }
 
+    projComet_ = uploadPair(buildCometCanvas());
+    projScythe_ = uploadCanvas(buildScytheProjCanvas());
+    projShuriken_ = uploadCanvas(buildShurikenCanvas());
+    projPillar_ = uploadCanvas(buildPillarCanvas());
+
     return true;
 }
 
 void FighterGfx::shutdown() {
+    freePair(projComet_);
+    if (projScythe_) { vita2d_free_texture(projScythe_); projScythe_ = nullptr; }
+    if (projShuriken_) { vita2d_free_texture(projShuriken_); projShuriken_ = nullptr; }
+    if (projPillar_) { vita2d_free_texture(projPillar_); projPillar_ = nullptr; }
     freePair(torsoBase_);
     freePair(chestPlate_);
     freePair(waistTabard_);
@@ -987,9 +1035,18 @@ void FighterGfx::drawFighter(const Fighter& f, float baseX, float baseY, int glo
             float ax = isKick ? fFootX : fHandX;
             float ay = isKick ? fFootY : fHandY;
 
-            // Multi-line bright slash arc
-            vita2d_draw_line(ax - dir * 36.0f, ay - 22.0f, ax + dir * 20.0f, ay - 4.0f, ch.auraColor);
-            vita2d_draw_line(ax - dir * 34.0f, ay + 20.0f, ax + dir * 20.0f, ay + 2.0f, ch.accentColor);
+            // Multi-segment curved energy slash ribbon
+            for (int seg = 0; seg < 4; ++seg) {
+                float a0 = -1.1f + seg * 0.55f;
+                float a1 = a0 + 0.55f;
+                float rad = 34.0f;
+                float x0 = ax - dir * 10.0f + std::cos(a0) * rad * dir;
+                float y0 = ay + std::sin(a0) * rad;
+                float x1 = ax - dir * 10.0f + std::cos(a1) * rad * dir;
+                float y1 = ay + std::sin(a1) * rad;
+                vita2d_draw_line(x0, y0, x1, y1, ch.auraColor);
+                vita2d_draw_line(x0 - dir * 4.0f, y0, x1 - dir * 4.0f, y1, ch.accentColor);
+            }
             vita2d_draw_fill_circle(ax + dir * 8.0f, ay, 11.0f, (ch.accentColor & 0x00FFFFFFu) | (165u << 24));
         }
 
@@ -998,6 +1055,26 @@ void FighterGfx::drawFighter(const Fighter& f, float baseX, float baseY, int glo
             vita2d_draw_fill_circle(fHandX, fHandY, 17.0f, (ch.auraColor & 0x00FFFFFFu) | (145u << 24));
             vita2d_draw_fill_circle(fHandX, fHandY, 9.5f, (ch.accentColor & 0x00FFFFFFu) | (220u << 24));
         }
+    }
+
+    // Status burn / poison / Super Ready visual aura
+    if (f.burnFrames > 0) {
+        for (int b = 0; b < 3; ++b) {
+            float bx = baseX + std::sin(globalFrame * 0.3f + b * 2.1f) * 18.0f;
+            float by = baseY - 30.0f - ((globalFrame * 3 + b * 25) % 85);
+            vita2d_draw_fill_circle(bx, by, 5.5f, rgba(255, 115, 25, 180));
+        }
+    }
+    if (f.poisonFrames > 0) {
+        for (int p = 0; p < 3; ++p) {
+            float px = baseX + std::cos(globalFrame * 0.25f + p * 2.0f) * 18.0f;
+            float py = baseY - 25.0f - ((globalFrame * 2 + p * 22) % 80);
+            vita2d_draw_fill_circle(px, py, 4.5f, rgba(95, 245, 65, 175));
+        }
+    }
+    if (f.meter >= MAX_METER) {
+        float auraR = 6.0f + 2.5f * std::sin(globalFrame * 0.25f);
+        vita2d_draw_fill_circle(fHandX, fHandY, auraR, (ch.accentColor & 0x00FFFFFFu) | (140u << 24));
     }
 
     // 9. Block Shield & Frozen Crystal Overlay
@@ -1014,6 +1091,48 @@ void FighterGfx::drawFighter(const Fighter& f, float baseX, float baseY, int glo
         vita2d_draw_line(baseX - 36.0f, baseY - 144.0f, baseX - 36.0f, baseY + 2.0f, rgba(210, 252, 255, 240));
         vita2d_draw_line(baseX + 36.0f, baseY - 144.0f, baseX + 36.0f, baseY + 2.0f, rgba(210, 252, 255, 240));
     }
+}
+
+void FighterGfx::drawProjectile(const Projectile& pr, float x, float y, int globalFrame) const {
+    if (pr.isPillar && projPillar_) {
+        vita2d_draw_texture_tint_rotate_hotspot(projPillar_, x, y + 66.0f, 0.0f, 32.0f, 138.0f, pr.color);
+        vita2d_draw_fill_circle(x, y + 58.0f, 22.0f, (pr.coreColor & 0x00FFFFFFu) | (175u << 24));
+        return;
+    }
+
+    if (pr.effectType == SpecialEffectType::REAPER_SCYTHE && projScythe_) {
+        float spin = globalFrame * 0.35f;
+        vita2d_draw_texture_tint_rotate_hotspot(projScythe_, x, y, spin, 28.0f, 28.0f, pr.color);
+        return;
+    }
+
+    if (pr.effectType == SpecialEffectType::ASTRAL_SHURIKEN && projShuriken_) {
+        float spin = globalFrame * 0.45f;
+        vita2d_draw_texture_tint_rotate_hotspot(projShuriken_, x, y, spin, 24.0f, 24.0f, pr.coreColor);
+        return;
+    }
+
+    if (pr.effectType == SpecialEffectType::TEMPEST_TORNADO) {
+        for (int r = 0; r < 5; ++r) {
+            float rw = pr.radius * (0.4f + r * 0.24f);
+            float wobble = std::sin(globalFrame * 0.4f + r) * 6.0f;
+            vita2d_draw_rectangle(x - rw + wobble, y + 26.0f - r * 22.0f, rw * 2.0f, 14.0f, (pr.color & 0x00FFFFFFu) | (195u << 24));
+            vita2d_draw_rectangle(x - rw * 0.5f + wobble, y + 28.0f - r * 22.0f, rw, 8.0f, (pr.coreColor & 0x00FFFFFFu) | (210u << 24));
+        }
+        return;
+    }
+
+    int dir = (pr.vx >= 0.0f) ? 1 : -1;
+    vita2d_texture* comet = projComet_.get(dir);
+    if (comet) {
+        float pivX = (dir >= 0) ? 44.0f : 20.0f;
+        vita2d_draw_texture_tint_rotate_hotspot(comet, x, y, 0.0f, pivX, 20.0f, pr.color);
+        vita2d_draw_fill_circle(x, y, pr.radius * 0.55f, pr.coreColor);
+        return;
+    }
+
+    vita2d_draw_fill_circle(x, y, pr.radius * 1.25f, pr.color);
+    vita2d_draw_fill_circle(x, y, pr.radius * 0.65f, pr.coreColor);
 }
 
 } // namespace vk

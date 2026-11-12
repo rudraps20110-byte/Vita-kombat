@@ -42,6 +42,7 @@ public:
 
     void drawFighter(const Fighter& f, float baseX, float baseY, int globalFrame, bool isGhost = false, uint8_t ghostAlpha = 255) const;
     void drawBustPortrait(int charId, float x, float y, float size, uint32_t tint = 0xFFFFFFFF) const;
+    void drawProjectile(const Projectile& pr, float x, float y, int globalFrame) const;
 
 private:
     TexPair torsoBase_;
@@ -60,6 +61,10 @@ private:
     TexPair headgear_[12];
     TexPair weapon_[7];
     vita2d_texture* bustPortraits_[CHARACTER_COUNT] = {};
+    TexPair projComet_;
+    vita2d_texture* projScythe_ = nullptr;
+    vita2d_texture* projShuriken_ = nullptr;
+    vita2d_texture* projPillar_ = nullptr;
 
     FighterPose computePose(const Fighter& f, int globalFrame) const;
 };
