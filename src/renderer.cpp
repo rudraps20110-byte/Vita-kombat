@@ -12,14 +12,6 @@ inline float clampf(float v, float lo, float hi) {
     return std::max(lo, std::min(hi, v));
 }
 
-uint32_t darken(uint32_t c, float factor) {
-    uint8_t r = static_cast<uint8_t>(std::min(255.0f, (c & 0xFF) * factor));
-    uint8_t g = static_cast<uint8_t>(std::min(255.0f, ((c >> 8) & 0xFF) * factor));
-    uint8_t b = static_cast<uint8_t>(std::min(255.0f, ((c >> 16) & 0xFF) * factor));
-    uint8_t a = static_cast<uint8_t>((c >> 24) & 0xFF);
-    return rgba(r, g, b, a);
-}
-
 uint32_t withAlpha(uint32_t c, uint8_t alpha) {
     return (c & 0x00FFFFFFu) | (static_cast<uint32_t>(alpha) << 24);
 }

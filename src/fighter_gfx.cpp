@@ -441,9 +441,9 @@ vita2d_texture* buildPortraitTex(int charId,
             float streak = (((x + y) % 14) < 2) ? 0.14f : 0.0f;
             uint32_t bg = rgba(14, 12, 22, 255);
             uint32_t glow = scaleColor(ch.auraColor, g * 0.78f + streak * g);
-            uint8_t r = static_cast<uint8_t>(std::min(255, (bg & 0xFF) + (glow & 0xFF)));
-            uint8_t gr = static_cast<uint8_t>(std::min(255, ((bg >> 8) & 0xFF) + ((glow >> 8) & 0xFF)));
-            uint8_t b = static_cast<uint8_t>(std::min(255, ((bg >> 16) & 0xFF) + ((glow >> 16) & 0xFF)));
+            uint8_t r = static_cast<uint8_t>(std::min<uint32_t>(255u, (bg & 0xFFu) + (glow & 0xFFu)));
+            uint8_t gr = static_cast<uint8_t>(std::min<uint32_t>(255u, ((bg >> 8) & 0xFFu) + ((glow >> 8) & 0xFFu)));
+            uint8_t b = static_cast<uint8_t>(std::min<uint32_t>(255u, ((bg >> 16) & 0xFFu) + ((glow >> 16) & 0xFFu)));
             p.px[y * 112 + x] = rgba(r, gr, b, 255);
         }
     }
