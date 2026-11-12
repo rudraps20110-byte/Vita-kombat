@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
+#include <cstring>
 
 namespace vk {
 
@@ -23,6 +24,15 @@ bool Renderer::init() {
     vita2d_set_clear_color(rgba(10, 8, 14));
     font_ = vita2d_load_default_pgf();
     keyArtTex_ = vita2d_load_PNG_file("app0:assets/keyart.png");
+    const char* storyPaths[4] = {
+        "app0:assets/story/art_0.png",
+        "app0:assets/story/art_1.png",
+        "app0:assets/story/art_2.png",
+        "app0:assets/story/art_3.png"
+    };
+    for (int i = 0; i < 4; ++i) {
+        storyArtTex_[i] = vita2d_load_PNG_file(storyPaths[i]);
+    }
     fighterGfx_.init();
     return (font_ != nullptr);
 }
@@ -30,6 +40,12 @@ bool Renderer::init() {
 void Renderer::shutdown() {
     vita2d_wait_rendering_done();
     fighterGfx_.shutdown();
+    for (int i = 0; i < 4; ++i) {
+        if (storyArtTex_[i]) {
+            vita2d_free_texture(storyArtTex_[i]);
+            storyArtTex_[i] = nullptr;
+        }
+    }
     if (activeStageTex_) {
         vita2d_free_texture(activeStageTex_);
         activeStageTex_ = nullptr;
@@ -258,9 +274,9 @@ void Renderer::drawTitleScreen(const UiState& ui) {
     drawTextCenteredShadow(SCREEN_W * 0.5f, 178.0f, rgba(255, 95, 45), 1.18f, "REALM OF TWELVE WARRIORS");
 
     const char* items[3] = {
-        "ENTER TOURNAMENT",
-        "TRAINING DOJO",
-        "12 WARRIOR ROSTER"
+        "STORY MODE (12 CHAPTERS)",
+        "ARCADE & VS KOMBAT",
+        "TRAINING DOJO"
     };
 
     for (int i = 0; i < 3; ++i) {
@@ -268,17 +284,285 @@ void Renderer::drawTitleScreen(const UiState& ui) {
         float y = 276.0f + i * 56.0f;
         uint32_t bg = sel ? rgba(195, 34, 24, 235) : rgba(20, 16, 28, 210);
         uint32_t border = sel ? rgba(255, 215, 70) : rgba(95, 85, 115);
-        vita2d_draw_rectangle(SCREEN_W * 0.5f - 185.0f, y - 28.0f, 370.0f, 44.0f, bg);
+        vita2d_draw_rectangle(SCREEN_W * 0.5f - 195.0f, y - 28.0f, 390.0f, 44.0f, bg);
         if (sel) {
-            vita2d_draw_rectangle(SCREEN_W * 0.5f - 185.0f, y - 28.0f, 8.0f, 44.0f, rgba(255, 215, 70));
+            vita2d_draw_rectangle(SCREEN_W * 0.5f - 195.0f, y - 28.0f, 8.0f, 44.0f, rgba(255, 215, 70));
         }
-        drawRectOutline(SCREEN_W * 0.5f - 185.0f, y - 28.0f, 370.0f, 44.0f, 2.0f, border);
-        drawTextCenteredShadow(SCREEN_W * 0.5f, y, sel ? rgba(255, 240, 155) : rgba(220, 220, 230), 1.05f, items[i]);
+        drawRectOutline(SCREEN_W * 0.5f - 195.0f, y - 28.0f, 390.0f, 44.0f, 2.0f, border);
+        drawTextCenteredShadow(SCREEN_W * 0.5f, y, sel ? rgba(255, 240, 155) : rgba(220, 220, 230), 1.02f, items[i]);
     }
 
     vita2d_draw_rectangle(0, 494.0f, SCREEN_W, 50.0f, rgba(8, 6, 12, 185));
-    drawTextCenteredShadow(SCREEN_W * 0.5f, 524.0f, rgba(205, 205, 220), 0.85f,
-                           "Cross (X): Select   |   12 Shaded Warriors   |   7 Arenas   |   5 Difficulty Levels");
+    drawTextCenteredShadow(SCREEN_W * 0.5f, 524.0f, rgba(205, 205, 220), 0.84f,
+                           "Cross (X): Select   |   12-Chapter Story   |   12 Shaded Warriors   |   7 Arenas");
+}
+
+void Renderer::drawStoryIllustration(StoryArtStyle style, float x, float y, float w, float h, int globalFrame) {
+    vita2d_draw_rectangle(x - 4.0f, y - 4.0f, w + 8.0f, h + 8.0f, rgba(12, 10, 18, 235));
+    int texIdx = -1;
+    if (style == StoryArtStyle::PAINTED_PORTRAIT_0) texIdx = 0;
+    else if (style == StoryArtStyle::PAINTED_PORTRAIT_1) texIdx = 1;
+    else if (style == StoryArtStyle::PAINTED_PORTRAIT_2) texIdx = 2;
+    else if (style == StoryArtStyle::PAINTED_PORTRAIT_3) texIdx = 3;
+
+    if (texIdx >= 0 && storyArtTex_[texIdx]) {
+        float tw = static_cast<float>(vita2d_texture_get_width(storyArtTex_[texIdx]));
+        float th = static_cast<float>(vita2d_texture_get_height(storyArtTex_[texIdx]));
+        if (tw > 0.0f && th > 0.0f) {
+            vita2d_draw_texture_scale(storyArtTex_[texIdx], x, y, w / tw, h / th);
+        }
+        drawRectOutline(x, y, w, h, 2.5f, rgba(255, 205, 65));
+        return;
+    }
+
+    float cx = x + w * 0.5f;
+    float cy = y + h * 0.5f;
+    float pulse = 0.88f + 0.12f * std::sin(globalFrame * 0.1f);
+    vita2d_draw_rectangle(x, y, w, h, rgba(16, 12, 26, 245));
+
+    switch (style) {
+        case StoryArtStyle::SCENE_NETHER_REBIRTH:
+            vita2d_draw_fill_circle(cx, cy + 10.0f, 58.0f * pulse, rgba(255, 85, 15, 150));
+            vita2d_draw_fill_circle(cx, cy + 6.0f, 34.0f, rgba(255, 205, 50, 220));
+            for (int i = 0; i < 10; ++i) {
+                float fx = x + 22.0f + i * 20.0f;
+                float fy = y + h - 10.0f - ((globalFrame * 3 + i * 19) % static_cast<int>(h - 20));
+                vita2d_draw_fill_circle(fx, fy, 4.0f, rgba(255, 140, 30, 220));
+            }
+            break;
+        case StoryArtStyle::SCENE_CRYO_HEART:
+            vita2d_draw_fill_circle(cx, cy, 52.0f * pulse, rgba(45, 195, 255, 125));
+            vita2d_draw_line(cx, y + 18.0f, cx + 28.0f, cy, rgba(185, 248, 255, 245));
+            vita2d_draw_line(cx + 28.0f, cy, cx, y + h - 18.0f, rgba(185, 248, 255, 245));
+            vita2d_draw_line(cx, y + h - 18.0f, cx - 28.0f, cy, rgba(185, 248, 255, 245));
+            vita2d_draw_line(cx - 28.0f, cy, cx, y + 18.0f, rgba(185, 248, 255, 245));
+            break;
+        case StoryArtStyle::SCENE_THUNDER_TRIAL:
+            vita2d_draw_fill_circle(cx, cy - 10.0f, 48.0f * pulse, rgba(95, 175, 255, 130));
+            vita2d_draw_line(cx + 24.0f, y + 6.0f, cx - 10.0f, cy - 6.0f, rgba(205, 240, 255, 255));
+            vita2d_draw_line(cx - 10.0f, cy - 6.0f, cx + 16.0f, cy + 4.0f, rgba(205, 240, 255, 255));
+            vita2d_draw_line(cx + 16.0f, cy + 4.0f, cx - 18.0f, y + h - 12.0f, rgba(130, 215, 255, 255));
+            break;
+        case StoryArtStyle::SCENE_VOID_SHADOW:
+            vita2d_draw_fill_circle(cx, cy, 50.0f * pulse, rgba(145, 45, 225, 140));
+            vita2d_draw_fill_circle(cx, cy, 30.0f, rgba(12, 8, 20, 255));
+            vita2d_draw_fill_circle(cx - 10.0f, cy - 2.0f, 3.5f, rgba(215, 110, 255));
+            vita2d_draw_fill_circle(cx + 10.0f, cy - 2.0f, 3.5f, rgba(215, 110, 255));
+            break;
+        case StoryArtStyle::SCENE_MAGMA_BIRTH:
+            vita2d_draw_rectangle(x, y + h * 0.55f, w, h * 0.45f, rgba(58, 32, 24));
+            vita2d_draw_fill_circle(cx, y + h * 0.55f, 42.0f * pulse, rgba(255, 115, 25, 185));
+            vita2d_draw_line(cx - 40.0f, y + h - 10.0f, cx, y + 28.0f, rgba(255, 180, 60, 230));
+            vita2d_draw_line(cx + 40.0f, y + h - 10.0f, cx, y + 28.0f, rgba(255, 180, 60, 230));
+            break;
+        case StoryArtStyle::SCENE_HURRICANE_BLADE:
+            for (int r = 0; r < 5; ++r) {
+                float rw = 20.0f + r * 14.0f;
+                float wob = std::sin(globalFrame * 0.15f + r) * 8.0f;
+                vita2d_draw_line(cx - rw + wob, y + h - 20.0f - r * 24.0f, cx + rw + wob, y + h - 20.0f - r * 24.0f, rgba(110, 245, 195, 210));
+            }
+            vita2d_draw_line(cx - 35.0f, y + h - 20.0f, cx + 42.0f, y + 22.0f, rgba(245, 255, 250, 255));
+            break;
+        case StoryArtStyle::SCENE_VENOM_ALCHEMY:
+            vita2d_draw_fill_circle(cx, cy + 12.0f, 44.0f * pulse, rgba(75, 225, 55, 145));
+            vita2d_draw_fill_circle(cx, cy + 16.0f, 24.0f, rgba(145, 255, 70, 225));
+            vita2d_draw_fill_circle(cx - 18.0f, cy - 22.0f, 7.0f, rgba(170, 255, 90, 200));
+            vita2d_draw_fill_circle(cx + 22.0f, cy - 30.0f, 5.0f, rgba(170, 255, 90, 200));
+            break;
+        case StoryArtStyle::SCENE_CYBER_REBUILD:
+            vita2d_draw_rectangle(x + 20.0f, y + 20.0f, w - 40.0f, h - 40.0f, rgba(28, 34, 48));
+            vita2d_draw_fill_circle(cx, cy, 30.0f * pulse, rgba(255, 45, 65, 180));
+            vita2d_draw_fill_circle(cx, cy, 14.0f, rgba(255, 185, 195, 245));
+            vita2d_draw_line(x + 12.0f, cy, x + w - 12.0f, cy, rgba(255, 75, 95, 175));
+            break;
+        case StoryArtStyle::SCENE_BLOOD_MOON:
+            vita2d_draw_fill_circle(cx, cy - 4.0f, 52.0f * pulse, rgba(215, 20, 50, 215));
+            vita2d_draw_fill_circle(cx, cy - 4.0f, 38.0f, rgba(255, 65, 95, 235));
+            vita2d_draw_rectangle(x, y + h * 0.72f, w, h * 0.28f, rgba(18, 8, 16, 230));
+            break;
+        case StoryArtStyle::SCENE_SOLAR_ECLIPSE:
+            vita2d_draw_fill_circle(cx, cy, 52.0f * pulse, rgba(255, 205, 55, 180));
+            vita2d_draw_fill_circle(cx, cy, 30.0f, rgba(255, 245, 165, 245));
+            vita2d_draw_line(cx, y + 12.0f, cx, y + h - 12.0f, rgba(255, 255, 235, 255));
+            vita2d_draw_line(cx - 26.0f, cy + 20.0f, cx + 26.0f, cy + 20.0f, rgba(255, 225, 95, 255));
+            break;
+        case StoryArtStyle::SCENE_FALLING_STAR:
+            vita2d_draw_line(x + 24.0f, y + 26.0f, cx + 32.0f, cy + 22.0f, rgba(140, 225, 255, 225));
+            vita2d_draw_fill_circle(cx + 32.0f, cy + 22.0f, 16.0f * pulse, rgba(190, 245, 255, 245));
+            vita2d_draw_fill_circle(x + 44.0f, y + 90.0f, 3.0f, rgba(255, 255, 255));
+            vita2d_draw_fill_circle(x + 170.0f, y + 36.0f, 2.5f, rgba(255, 255, 255));
+            break;
+        default:
+            vita2d_draw_fill_circle(cx, cy, 52.0f * pulse, rgba(165, 55, 235, 165));
+            vita2d_draw_fill_circle(cx, cy, 24.0f, rgba(255, 200, 75, 230));
+            break;
+    }
+
+    drawRectOutline(x, y, w, h, 2.5f, rgba(255, 205, 70));
+}
+
+void Renderer::drawStoryChapterSelect(const UiState& ui, const StoryProgress& prog) {
+    drawStageBackdrop(getStoryChapter(prog.activeChapter).previewStageId, ui.frameCount, true);
+    drawTextCenteredShadow(SCREEN_W * 0.5f, 38.0f, rgba(255, 205, 65), 1.45f, "STORY MODE - CHRONICLES OF POWER");
+
+    // 4x3 grid of 12 character chapters
+    for (int i = 0; i < STORY_CHAPTER_COUNT; ++i) {
+        const StoryChapter& sc = getStoryChapter(i);
+        const CharacterDef& ch = getCharacter(sc.heroCharId);
+        int col = i % 4;
+        int row = i / 4;
+        float cx = 34.0f + col * 136.0f;
+        float cy = 56.0f + row * 102.0f;
+        float cw = 126.0f;
+        float chH = 92.0f;
+
+        bool unlocked = (i < prog.unlockedChapters);
+        bool cleared = ((prog.completedMask & (1u << i)) != 0);
+        bool sel = (prog.activeChapter == i);
+
+        vita2d_draw_rectangle(cx, cy, cw, chH, rgba(16, 14, 26, 235));
+        fighterGfx_.drawBustPortrait(sc.heroCharId, cx + 26.0f, cy + 4.0f, 72.0f,
+                                     unlocked ? 0xFFFFFFFF : rgba(90, 90, 105, 200));
+
+        vita2d_draw_rectangle(cx, cy + chH - 22.0f, cw, 22.0f, rgba(10, 8, 16, 238));
+        drawTextCentered(cx + cw * 0.5f, cy + chH - 6.0f,
+                         unlocked ? ch.accentColor : rgba(130, 130, 145), 0.70f, sc.chapterLabel);
+
+        if (cleared) {
+            vita2d_draw_rectangle(cx + cw - 52.0f, cy + 3.0f, 49.0f, 15.0f, rgba(40, 165, 75));
+            drawTextShadow(cx + cw - 49.0f, cy + 15.0f, rgba(255, 255, 255), 0.62f, "CLEAR");
+        } else if (!unlocked) {
+            drawTextCenteredShadow(cx + cw * 0.5f, cy + 46.0f, rgba(220, 180, 180), 0.72f, "LOCKED");
+        }
+
+        drawRectOutline(cx, cy, cw, chH, sel ? 3.0f : 1.5f,
+                        sel ? rgba(255, 215, 65) : (unlocked ? rgba(90, 85, 120) : rgba(50, 48, 65)));
+    }
+
+    // Right-side Chapter Synopsis & Origin Preview
+    const StoryChapter& cur = getStoryChapter(prog.activeChapter);
+    const CharacterDef& hero = getCharacter(cur.heroCharId);
+    bool curUnlocked = (prog.activeChapter < prog.unlockedChapters);
+
+    vita2d_draw_rectangle(586.0f, 56.0f, 346.0f, 434.0f, rgba(16, 13, 26, 240));
+    drawRectOutline(586.0f, 56.0f, 346.0f, 434.0f, 2.5f, hero.accentColor);
+
+    drawTextCenteredShadow(759.0f, 82.0f, rgba(255, 210, 70), 0.92f, cur.chapterLabel);
+    drawTextCenteredShadow(759.0f, 106.0f, hero.accentColor, 1.05f, cur.title);
+
+    drawStoryIllustration(cur.beats[0].artStyle, 646.0f, 122.0f, 226.0f, 160.0f, ui.frameCount);
+
+    drawTextCenteredShadow(759.0f, 308.0f, rgba(165, 235, 255), 0.78f, cur.powerTag);
+    drawTextShadow(602.0f, 340.0f, rgba(230, 230, 240), 0.76f, cur.summary);
+
+    char heroBuf[80];
+    std::snprintf(heroBuf, sizeof(heroBuf), "LEAD WARRIOR: %s (%s)", hero.name, hero.title);
+    drawTextShadow(602.0f, 386.0f, hero.accentColor, 0.78f, heroBuf);
+
+    if (curUnlocked) {
+        vita2d_draw_rectangle(614.0f, 426.0f, 290.0f, 42.0f, rgba(185, 34, 24, 235));
+        drawRectOutline(614.0f, 426.0f, 290.0f, 42.0f, 2.0f, rgba(255, 215, 70));
+        drawTextCenteredShadow(759.0f, 453.0f, rgba(255, 240, 155), 0.96f, "Cross (X): PLAY CHAPTER");
+    } else {
+        drawTextCenteredShadow(759.0f, 448.0f, rgba(255, 120, 120), 0.85f, "Clear previous chapter or press Triangle to Unlock All");
+    }
+
+    drawTextCenteredShadow(SCREEN_W * 0.5f, 520.0f, rgba(210, 210, 225), 0.84f,
+                           "D-Pad: Choose Chapter   |   Cross (X): Start   |   Triangle: Unlock All Chapters   |   Circle (O): Back");
+}
+
+void Renderer::drawStoryScene(const UiState& ui, const StoryProgress& prog) {
+    const StoryChapter& sc = getStoryChapter(prog.activeChapter);
+    int bIdx = std::max(0, std::min(sc.beatCount - 1, prog.activeBeat));
+    const StoryBeat& bt = sc.beats[bIdx];
+
+    drawStageBackdrop(bt.stageId, ui.frameCount, false);
+    vita2d_draw_rectangle(0, 0, SCREEN_W, SCREEN_H, rgba(0, 0, 0, 75));
+
+    // Top Story Header Bar
+    vita2d_draw_rectangle(0, 0, SCREEN_W, 40.0f, rgba(10, 8, 18, 215));
+    drawTextShadow(22.0f, 27.0f, rgba(255, 205, 70), 0.88f, sc.chapterLabel);
+    drawTextShadow(130.0f, 27.0f, rgba(235, 235, 245), 0.88f, sc.title);
+    char progBuf[48];
+    std::snprintf(progBuf, sizeof(progBuf), "SCENE %d / %d", bIdx + 1, sc.beatCount);
+    drawTextShadow(SCREEN_W - 145.0f, 27.0f, rgba(165, 230, 255), 0.82f, progBuf);
+
+    // Center Illustrated Story Artwork Panel (mandatory visual scene panel!)
+    drawStoryIllustration(bt.artStyle, SCREEN_W * 0.5f - 115.0f, 58.0f, 230.0f, 185.0f, ui.frameCount);
+
+    // Live Animated Warriors on Left & Right acting out the story!
+    if (bt.leftChar >= 0) {
+        Fighter lf;
+        lf.charId = bt.leftChar;
+        lf.facing = 1;
+        lf.state = bt.leftPose;
+        lf.stateFrame = ui.frameCount;
+        lf.y = GROUND_Y;
+        fighterGfx_.drawFighter(lf, 210.0f, 360.0f, ui.frameCount);
+    }
+    if (bt.rightChar >= 0) {
+        Fighter rf;
+        rf.charId = bt.rightChar;
+        rf.facing = -1;
+        rf.state = bt.rightPose;
+        rf.stateFrame = ui.frameCount;
+        rf.y = GROUND_Y;
+        fighterGfx_.drawFighter(rf, 750.0f, 360.0f, ui.frameCount);
+    }
+
+    // Visual-Novel Dialogue Panel at bottom
+    vita2d_draw_rectangle(24.0f, 376.0f, SCREEN_W - 48.0f, 150.0f, rgba(14, 11, 24, 240));
+    uint32_t boxAccent = rgba(255, 205, 70);
+    int speakerChar = sc.heroCharId;
+    if (bt.speaker == 1 && bt.leftChar >= 0) {
+        speakerChar = bt.leftChar;
+        boxAccent = getCharacter(speakerChar).accentColor;
+    } else if (bt.speaker == 2 && bt.rightChar >= 0) {
+        speakerChar = bt.rightChar;
+        boxAccent = getCharacter(speakerChar).accentColor;
+    }
+    drawRectOutline(24.0f, 376.0f, SCREEN_W - 48.0f, 150.0f, 2.5f, boxAccent);
+
+    // Speaker Bust Portrait inside dialogue box
+    fighterGfx_.drawBustPortrait(speakerChar, 38.0f, 392.0f, 96.0f);
+    drawRectOutline(38.0f, 392.0f, 96.0f, 96.0f, 2.0f, boxAccent);
+
+    // Nameplate
+    vita2d_draw_rectangle(148.0f, 362.0f, 210.0f, 28.0f, rgba(18, 14, 30, 248));
+    drawRectOutline(148.0f, 362.0f, 210.0f, 28.0f, 2.0f, boxAccent);
+    drawTextShadow(160.0f, 382.0f, boxAccent, 0.92f, bt.speakerName);
+
+    // Typewriter-revealed lines
+    auto drawTyped = [&](float tx, float ty, const char* txt, int maxChars) {
+        if (!txt) return;
+        char buf[200];
+        int len = static_cast<int>(std::strlen(txt));
+        int show = std::max(0, std::min(len, maxChars));
+        std::memcpy(buf, txt, show);
+        buf[show] = '\0';
+        drawTextShadow(tx, ty, rgba(242, 242, 250), 0.90f, buf);
+    };
+
+    int l1Len = bt.line1 ? static_cast<int>(std::strlen(bt.line1)) : 0;
+    drawTyped(150.0f, 418.0f, bt.line1, ui.storyRevealChars);
+    if (ui.storyRevealChars > l1Len && bt.line2) {
+        drawTyped(150.0f, 446.0f, bt.line2, ui.storyRevealChars - l1Len);
+    }
+
+    if (bt.choiceA && bt.choiceB) {
+        for (int c = 0; c < 2; ++c) {
+            bool sel = (ui.storyChoiceSel == c);
+            float cy = 468.0f + c * 28.0f;
+            vita2d_draw_rectangle(150.0f, cy, 740.0f, 24.0f, sel ? rgba(180, 32, 24, 235) : rgba(24, 20, 36, 220));
+            drawRectOutline(150.0f, cy, 740.0f, 24.0f, 1.5f, sel ? rgba(255, 215, 70) : rgba(85, 80, 110));
+            drawTextShadow(164.0f, cy + 17.0f, sel ? rgba(255, 240, 150) : rgba(215, 215, 225), 0.80f,
+                           (c == 0) ? bt.choiceA : bt.choiceB);
+        }
+    } else {
+        const char* prompt = bt.triggersBattle ? "Cross (X): BEGIN STORY BATTLE!   |   Circle (O): Chapter Menu"
+                                               : "Cross (X): Continue   |   START: Skip Cutscene   |   Circle (O): Back";
+        drawTextShadow(150.0f, 512.0f, rgba(255, 215, 95), 0.78f, prompt);
+    }
 }
 
 void Renderer::drawModeSelect(const UiState& ui) {
@@ -810,12 +1094,21 @@ void Renderer::drawMatchOverScreen(const MatchState& m, const UiState& ui) {
     std::snprintf(statBuf, sizeof(statBuf), "Max Combo Landed: %d Hits", m.fighters[0].maxComboLanded);
     drawTextCenteredShadow(SCREEN_W * 0.5f, 318.0f, rgba(255, 215, 95), 0.92f, statBuf);
 
-    if (m.mode == GameMode::ARCADE && m.winnerSlot == 0) {
-        drawTextCenteredShadow(SCREEN_W * 0.5f, 368.0f, rgba(160, 255, 175), 1.05f, "Cross (X): Next Tower Opponent");
+    if (m.mode == GameMode::STORY) {
+        if (m.winnerSlot == 0) {
+            drawTextCenteredShadow(SCREEN_W * 0.5f, 368.0f, rgba(160, 255, 175), 1.05f, "Cross (X): Continue Story");
+        } else {
+            drawTextCenteredShadow(SCREEN_W * 0.5f, 368.0f, rgba(255, 160, 120), 1.05f, "Cross (X): Retry Story Battle");
+        }
+        drawTextCenteredShadow(SCREEN_W * 0.5f, 404.0f, rgba(210, 210, 225), 0.90f, "Circle (O): Chapter Select");
     } else {
-        drawTextCenteredShadow(SCREEN_W * 0.5f, 368.0f, rgba(255, 220, 110), 1.05f, "Cross (X): Rematch");
+        if (m.mode == GameMode::ARCADE && m.winnerSlot == 0) {
+            drawTextCenteredShadow(SCREEN_W * 0.5f, 368.0f, rgba(160, 255, 175), 1.05f, "Cross (X): Next Tower Opponent");
+        } else {
+            drawTextCenteredShadow(SCREEN_W * 0.5f, 368.0f, rgba(255, 220, 110), 1.05f, "Cross (X): Rematch");
+        }
+        drawTextCenteredShadow(SCREEN_W * 0.5f, 404.0f, rgba(210, 210, 225), 0.90f, "Circle (O): Character Select");
     }
-    drawTextCenteredShadow(SCREEN_W * 0.5f, 404.0f, rgba(210, 210, 225), 0.90f, "Circle (O): Character Select");
 }
 
 void Renderer::drawArcadeVictoryScreen(const UiState& ui) {

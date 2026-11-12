@@ -2,6 +2,7 @@
 #include <psp2/kernel/processmgr.h>
 #include <ctime>
 #include <cstdlib>
+#include <cstring>
 #include <algorithm>
 
 #include "types.hpp"
@@ -9,6 +10,7 @@
 #include "audio.hpp"
 #include "combat.hpp"
 #include "renderer.hpp"
+#include "story.hpp"
 
 extern "C" {
 int _newlib_heap_size_user = 96 * 1024 * 1024;
@@ -111,6 +113,15 @@ int main() {
     GameScreen screen = GameScreen::TITLE;
     UiState ui;
     MatchState match;
+    StoryProgress storyProg;
+    loadStoryProgress(storyProg);
+
+    auto launchStoryBattle = [&](const StoryBeat& bt) {
+        initMatch(match, bt.battleP1, bt.battleP2, bt.battleStage, GameMode::STORY, bt.battleDiff);
+        if (bt.startMeterBonus > 0) {
+            match.fighters[0].meter = std::min(MAX_METER, bt.startMeterBonus);
+        }
+    };
 
     uint32_t prevButtons = 0;
     bool prevUp = false, prevDown = false, prevLeft = false, prevRight = false;
@@ -130,13 +141,11 @@ int main() {
                 } else if (in.crossPressed || in.startPressed) {
                     audio.play(SoundId::MENU_SELECT);
                     if (ui.titleSelection == 0) {
-                        screen = GameScreen::MODE_SELECT;
+                        screen = GameScreen::STORY_CHAPTER_SELECT;
                     } else if (ui.titleSelection == 1) {
-                        ui.modeSelection = 2; // Training
-                        ui.selectingP2 = false;
-                        screen = GameScreen::CHAR_SELECT;
+                        screen = GameScreen::MODE_SELECT;
                     } else {
-                        ui.modeSelection = 1;
+                        ui.modeSelection = 2; // Training
                         ui.selectingP2 = false;
                         screen = GameScreen::CHAR_SELECT;
                     }
@@ -145,6 +154,113 @@ int main() {
                 renderer.drawTitleScreen(ui);
                 renderer.endFrame();
                 break;
+
+            case GameScreen::STORY_CHAPTER_SELECT:
+                if (in.leftPressed) {
+                    storyProg.activeChapter = (storyProg.activeChapter % 4 == 0) ? (storyProg.activeChapter + 3) : (storyProg.activeChapter - 1);
+                    audio.play(SoundId::MENU_MOVE);
+                } else if (in.rightPressed) {
+                    storyProg.activeChapter = (storyProg.activeChapter % 4 == 3) ? (storyProg.activeChapter - 3) : (storyProg.activeChapter + 1);
+                    audio.play(SoundId::MENU_MOVE);
+                } else if (in.upPressed) {
+                    storyProg.activeChapter = (storyProg.activeChapter + STORY_CHAPTER_COUNT - 4) % STORY_CHAPTER_COUNT;
+                    audio.play(SoundId::MENU_MOVE);
+                } else if (in.downPressed) {
+                    storyProg.activeChapter = (storyProg.activeChapter + 4) % STORY_CHAPTER_COUNT;
+                    audio.play(SoundId::MENU_MOVE);
+                } else if (in.trianglePressed) {
+                    storyProg.unlockedChapters = STORY_CHAPTER_COUNT;
+                    saveStoryProgress(storyProg);
+                    audio.play(SoundId::SUPER_FLASH);
+                } else if (in.crossPressed || in.startPressed) {
+                    if (storyProg.activeChapter < storyProg.unlockedChapters) {
+                        audio.play(SoundId::MENU_SELECT);
+                        storyProg.activeBeat = 0;
+                        ui.storyChoiceSel = 0;
+                        ui.storyRevealChars = 0;
+                        screen = GameScreen::STORY_SCENE;
+                    } else {
+                        audio.play(SoundId::BLOCK);
+                    }
+                } else if (in.circlePressed) {
+                    audio.play(SoundId::MENU_MOVE);
+                    screen = GameScreen::TITLE;
+                }
+                renderer.prepareStage(getStoryChapter(storyProg.activeChapter).previewStageId);
+                renderer.beginFrame();
+                renderer.drawStoryChapterSelect(ui, storyProg);
+                renderer.endFrame();
+                break;
+
+            case GameScreen::STORY_SCENE: {
+                const StoryChapter& sc = getStoryChapter(storyProg.activeChapter);
+                if (storyProg.activeBeat >= sc.beatCount) {
+                    storyProg.completedMask |= (1u << storyProg.activeChapter);
+                    if (storyProg.unlockedChapters < STORY_CHAPTER_COUNT &&
+                        storyProg.activeChapter + 1 >= storyProg.unlockedChapters) {
+                        storyProg.unlockedChapters = storyProg.activeChapter + 2;
+                    }
+                    saveStoryProgress(storyProg);
+                    if (storyProg.activeChapter + 1 < STORY_CHAPTER_COUNT) {
+                        storyProg.activeChapter++;
+                        storyProg.activeBeat = 0;
+                        ui.storyRevealChars = 0;
+                        ui.storyChoiceSel = 0;
+                    } else {
+                        screen = GameScreen::STORY_CHAPTER_SELECT;
+                    }
+                    break;
+                }
+
+                const StoryBeat& bt = sc.beats[storyProg.activeBeat];
+                ui.storyRevealChars = std::min(500, ui.storyRevealChars + 2);
+
+                if (bt.choiceA && bt.choiceB) {
+                    if (in.upPressed || in.downPressed) {
+                        ui.storyChoiceSel = 1 - ui.storyChoiceSel;
+                        audio.play(SoundId::MENU_MOVE);
+                    } else if (in.crossPressed) {
+                        audio.play(SoundId::MENU_SELECT);
+                        int jump = (ui.storyChoiceSel == 0) ? bt.jumpA : bt.jumpB;
+                        storyProg.activeBeat += jump;
+                        ui.storyChoiceSel = 0;
+                        ui.storyRevealChars = 0;
+                    }
+                } else if (in.crossPressed) {
+                    int totalLen = (bt.line1 ? static_cast<int>(std::strlen(bt.line1)) : 0) +
+                                   (bt.line2 ? static_cast<int>(std::strlen(bt.line2)) : 0);
+                    if (ui.storyRevealChars < totalLen) {
+                        ui.storyRevealChars = totalLen;
+                    } else if (bt.triggersBattle) {
+                        audio.play(SoundId::MENU_SELECT);
+                        launchStoryBattle(bt);
+                        screen = GameScreen::FIGHT;
+                    } else {
+                        audio.play(SoundId::MENU_MOVE);
+                        storyProg.activeBeat++;
+                        ui.storyRevealChars = 0;
+                    }
+                } else if (in.startPressed) {
+                    // Fast-forward cutscene to next battle or end of chapter
+                    audio.play(SoundId::MENU_SELECT);
+                    while (storyProg.activeBeat < sc.beatCount && !sc.beats[storyProg.activeBeat].triggersBattle &&
+                           !sc.beats[storyProg.activeBeat].choiceA) {
+                        storyProg.activeBeat++;
+                    }
+                    ui.storyRevealChars = 0;
+                } else if (in.circlePressed) {
+                    audio.play(SoundId::MENU_MOVE);
+                    screen = GameScreen::STORY_CHAPTER_SELECT;
+                }
+
+                if (screen == GameScreen::STORY_SCENE && storyProg.activeBeat < sc.beatCount) {
+                    renderer.prepareStage(sc.beats[storyProg.activeBeat].stageId);
+                    renderer.beginFrame();
+                    renderer.drawStoryScene(ui, storyProg);
+                    renderer.endFrame();
+                }
+                break;
+            }
 
             case GameScreen::MODE_SELECT:
                 if (in.upPressed) {
@@ -287,7 +403,14 @@ int main() {
                     } else if (ui.pauseSelection == 1) {
                         screen = GameScreen::MOVE_LIST;
                     } else if (ui.pauseSelection == 2) {
-                        launchCurrentMatch(match, ui);
+                        if (match.mode == GameMode::STORY) {
+                            const StoryChapter& sc = getStoryChapter(storyProg.activeChapter);
+                            if (storyProg.activeBeat < sc.beatCount) {
+                                launchStoryBattle(sc.beats[storyProg.activeBeat]);
+                            }
+                        } else {
+                            launchCurrentMatch(match, ui);
+                        }
                         screen = GameScreen::FIGHT;
                     } else {
                         screen = GameScreen::TITLE;
@@ -313,7 +436,19 @@ int main() {
             case GameScreen::MATCH_OVER:
                 if (in.crossPressed || in.startPressed) {
                     audio.play(SoundId::MENU_SELECT);
-                    if (match.mode == GameMode::ARCADE && match.winnerSlot == 0) {
+                    if (match.mode == GameMode::STORY) {
+                        const StoryChapter& sc = getStoryChapter(storyProg.activeChapter);
+                        if (match.winnerSlot == 0) {
+                            int jump = (storyProg.activeBeat < sc.beatCount) ? sc.beats[storyProg.activeBeat].jumpA : 1;
+                            storyProg.activeBeat += std::max(1, jump);
+                            ui.storyRevealChars = 0;
+                            ui.storyChoiceSel = 0;
+                            screen = GameScreen::STORY_SCENE;
+                        } else if (storyProg.activeBeat < sc.beatCount) {
+                            launchStoryBattle(sc.beats[storyProg.activeBeat]);
+                            screen = GameScreen::FIGHT;
+                        }
+                    } else if (match.mode == GameMode::ARCADE && match.winnerSlot == 0) {
                         ui.arcadeStageIndex++;
                         if (ui.arcadeStageIndex >= CHARACTER_COUNT) {
                             screen = GameScreen::ARCADE_VICTORY;
@@ -327,8 +462,12 @@ int main() {
                     }
                 } else if (in.circlePressed) {
                     audio.play(SoundId::MENU_MOVE);
-                    ui.selectingP2 = false;
-                    screen = GameScreen::CHAR_SELECT;
+                    if (match.mode == GameMode::STORY) {
+                        screen = GameScreen::STORY_CHAPTER_SELECT;
+                    } else {
+                        ui.selectingP2 = false;
+                        screen = GameScreen::CHAR_SELECT;
+                    }
                 }
                 renderer.beginFrame();
                 renderer.drawMatchOverScreen(match, ui);

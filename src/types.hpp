@@ -29,6 +29,8 @@ constexpr int DIFFICULTY_COUNT = 5;
 enum class GameScreen {
     TITLE,
     MODE_SELECT,
+    STORY_CHAPTER_SELECT,
+    STORY_SCENE,
     CHAR_SELECT,
     STAGE_SELECT,
     VS_SPLASH,
@@ -42,7 +44,8 @@ enum class GameScreen {
 enum class GameMode {
     ARCADE = 0,
     VS_CPU = 1,
-    TRAINING = 2
+    TRAINING = 2,
+    STORY = 3
 };
 
 enum class Difficulty {

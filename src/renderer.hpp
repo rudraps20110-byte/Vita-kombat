@@ -3,6 +3,7 @@
 #include "types.hpp"
 #include "combat.hpp"
 #include "fighter_gfx.hpp"
+#include "story.hpp"
 #include <vita2d.h>
 
 namespace vk {
@@ -20,6 +21,8 @@ struct UiState {
     int arcadeOpponents[CHARACTER_COUNT] = {0};
     int splashTimer = 0;
     int frameCount = 0;
+    int storyChoiceSel = 0;
+    int storyRevealChars = 0;
 };
 
 class Renderer {
@@ -33,6 +36,8 @@ public:
 
     void drawTitleScreen(const UiState& ui);
     void drawModeSelect(const UiState& ui);
+    void drawStoryChapterSelect(const UiState& ui, const StoryProgress& prog);
+    void drawStoryScene(const UiState& ui, const StoryProgress& prog);
     void drawCharacterSelect(const UiState& ui);
     void drawStageSelect(const UiState& ui);
     void drawVsSplash(const UiState& ui);
@@ -47,8 +52,10 @@ private:
     vita2d_texture* activeStageTex_ = nullptr;
     int activeStageId_ = -1;
     vita2d_texture* keyArtTex_ = nullptr;
+    vita2d_texture* storyArtTex_[4] = {nullptr, nullptr, nullptr, nullptr};
     FighterGfx fighterGfx_;
 
+    void drawStoryIllustration(StoryArtStyle style, float x, float y, float w, float h, int globalFrame);
     void drawTextCentered(float cx, float y, uint32_t color, float scale, const char* text);
     void drawTextShadow(float x, float y, uint32_t color, float scale, const char* text);
     void drawTextCenteredShadow(float cx, float y, uint32_t color, float scale, const char* text);

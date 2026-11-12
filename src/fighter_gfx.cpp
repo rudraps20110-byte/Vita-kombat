@@ -61,6 +61,13 @@ inline uint32_t alphaBlend(uint32_t dst, uint32_t src) {
     );
 }
 
+int getPhysiqueType(int charId) {
+    // 0 = Athletic Standard, 1 = Heavy Titan/Cyber, 2 = Sleek Agile
+    if (charId == 4 || charId == 7 || charId == 10) return 1;
+    if (charId == 6 || charId == 8 || charId == 11) return 2;
+    return 0;
+}
+
 struct Canvas {
     int w = 0;
     int h = 0;
@@ -73,13 +80,14 @@ struct Canvas {
         px[y * w + x] = alphaBlend(px[y * w + x], col);
     }
 
-    // Draws a muscular/armored tapered segment with 3-tone shading and dark arcade ink outline
-    void drawShadedLimb(float x0, float y0, float r0, float x1, float y1, float r1,
-                        float bulge, uint32_t baseCol, float outlineWidth = 2.0f) {
-        float minX = std::floor(std::min(x0 - r0, x1 - r1) - bulge - outlineWidth - 2.0f);
-        float maxX = std::ceil(std::max(x0 + r0, x1 + r1) + bulge + outlineWidth + 2.0f);
-        float minY = std::floor(std::min(y0 - r0, y1 - r1) - bulge - outlineWidth - 2.0f);
-        float maxY = std::ceil(std::max(y0 + r0, y1 + r1) + bulge + outlineWidth + 2.0f);
+    // Organic curved muscle/armor profile rasterizer with smooth 5-tone shading + soft ink outline
+    template <typename RadFn, typename ShadeFn>
+    void drawOrganic(float x0, float y0, float x1, float y1, float maxRad,
+                     RadFn radFn, ShadeFn shadeFn, float outlineWidth = 1.9f) {
+        float minX = std::floor(std::min(x0, x1) - maxRad - outlineWidth - 3.0f);
+        float maxX = std::ceil(std::max(x0, x1) + maxRad + outlineWidth + 3.0f);
+        float minY = std::floor(std::min(y0, y1) - maxRad - outlineWidth - 3.0f);
+        float maxY = std::ceil(std::max(y0, y1) + maxRad + outlineWidth + 3.0f);
 
         float vx = x1 - x0;
         float vy = y1 - y0;
@@ -87,7 +95,6 @@ struct Canvas {
         float len = std::sqrt(std::max(0.001f, len2));
         float ux = vx / len;
         float uy = vy / len;
-        // Perpendicular pointing "front/light" side
         float nx = uy;
         float ny = -ux;
 
@@ -102,28 +109,44 @@ struct Canvas {
                 float ry = (py + 0.5f) - projY;
                 float dist = std::sqrt(rx * rx + ry * ry);
 
-                float rad = lerpf(r0, r1, t) + std::sin(t * PI) * bulge;
+                float rad = radFn(t);
                 float signedDist = dist - rad;
-                if (signedDist > 0.5f) continue;
+                if (signedDist > 0.7f) continue;
 
+                // Anti-aliased outer edge
+                if (signedDist > 0.0f) {
+                    uint8_t a = static_cast<uint8_t>((1.0f - signedDist / 0.7f) * 235.0f);
+                    put(pxX, py, packRgba(12, 10, 18, a));
+                    continue;
+                }
                 if (signedDist > -outlineWidth) {
-                    put(pxX, py, packRgba(12, 10, 18, 255));
+                    put(pxX, py, packRgba(14, 11, 20, 255));
                     continue;
                 }
 
-                // 3-tone directional cel shading
                 float side = (rx * nx + ry * ny) / std::max(1.0f, rad);
-                float light = side * 0.65f + (0.5f - t) * 0.25f;
-                float mul = 0.88f;
-                if (light > 0.22f) mul = 1.18f;
-                else if (light < -0.25f) mul = 0.62f;
-
+                uint32_t baseCol = shadeFn(t, side, dist / std::max(1.0f, rad));
+                // Smooth directional rim & ambient occlusion lighting
+                float light = side * 0.65f + (0.45f - t) * 0.28f;
+                float mul = 0.88f + clampf(light * 0.36f, -0.32f, 0.30f);
+                if (side > 0.68f && side < 0.88f) mul += 0.14f; // crisp rim specular
                 put(pxX, py, scaleColor(baseCol, mul));
             }
         }
     }
 
-    void drawShadedEllipse(float cx, float cy, float rx, float ry, uint32_t baseCol, float outlineWidth = 2.0f) {
+    void drawShadedLimb(float x0, float y0, float r0, float x1, float y1, float r1,
+                        float bulge, uint32_t baseCol, float outlineWidth = 1.9f) {
+        float maxR = std::max(r0, r1) + std::abs(bulge);
+        drawOrganic(
+            x0, y0, x1, y1, maxR,
+            [=](float t) { return lerpf(r0, r1, t) + std::sin(t * PI) * bulge; },
+            [=](float, float, float) { return baseCol; },
+            outlineWidth
+        );
+    }
+
+    void drawShadedEllipse(float cx, float cy, float rx, float ry, uint32_t baseCol, float outlineWidth = 1.9f) {
         int minX = static_cast<int>(std::floor(cx - rx - outlineWidth - 2));
         int maxX = static_cast<int>(std::ceil(cx + rx + outlineWidth + 2));
         int minY = static_cast<int>(std::floor(cy - ry - outlineWidth - 2));
@@ -135,25 +158,19 @@ struct Canvas {
                 float dy = (py + 0.5f - cy) / ry;
                 float d = std::sqrt(dx * dx + dy * dy);
                 float approxPx = (d - 1.0f) * std::min(rx, ry);
-                if (approxPx > 0.5f) continue;
+                if (approxPx > 0.7f) continue;
+                if (approxPx > 0.0f) {
+                    uint8_t a = static_cast<uint8_t>((1.0f - approxPx / 0.7f) * 235.0f);
+                    put(pxX, py, packRgba(14, 11, 20, a));
+                    continue;
+                }
                 if (approxPx > -outlineWidth) {
-                    put(pxX, py, packRgba(12, 10, 18, 255));
+                    put(pxX, py, packRgba(14, 11, 20, 255));
                     continue;
                 }
                 float light = -dx * 0.55f - dy * 0.55f;
-                float mul = 0.88f;
-                if (light > 0.25f) mul = 1.20f;
-                else if (light < -0.22f) mul = 0.60f;
+                float mul = 0.88f + clampf(light * 0.38f, -0.32f, 0.30f);
                 put(pxX, py, scaleColor(baseCol, mul));
-            }
-        }
-    }
-
-    void drawRectOutlined(int x, int y, int rw, int rh, uint32_t fill, uint32_t outline = packRgba(12, 10, 18, 255)) {
-        for (int py = y; py < y + rh; ++py) {
-            for (int pxX = x; pxX < x + rw; ++pxX) {
-                bool edge = (pxX == x || pxX == x + rw - 1 || py == y || py == y + rh - 1);
-                put(pxX, py, edge ? outline : fill);
             }
         }
     }
@@ -228,163 +245,256 @@ FighterPose lerpPose(const FighterPose& a, const FighterPose& b, float t) {
     return out;
 }
 
-Canvas buildTorsoCanvas() {
-    Canvas c(64, 72);
-    // Broad V-taper muscular torso + abdominal shading
-    c.drawShadedLimb(32, 18, 21, 32, 56, 14, 2.0f, packRgba(230, 230, 235));
-    // Pectoral & ab seam shading
-    c.drawRectOutlined(18, 22, 28, 4, packRgba(175, 175, 185), packRgba(40, 35, 50));
-    c.drawRectOutlined(22, 34, 20, 4, packRgba(170, 170, 180), packRgba(45, 40, 55));
-    c.drawRectOutlined(23, 43, 18, 4, packRgba(165, 165, 175), packRgba(45, 40, 55));
+// Organic anatomical torso with sculpted deltoids, lat-to-waist taper, pectoral curve & muscle shading
+Canvas buildTorsoCanvas(int physique) {
+    Canvas c(68, 74);
+    float bulk = (physique == 1) ? 4.5f : (physique == 2 ? -2.2f : 0.0f);
+    c.drawOrganic(
+        34, 14, 34, 58, 28.0f,
+        [=](float t) {
+            // Broad shoulder -> ribcage -> athletic waist -> hip flare
+            float chest = 19.5f + bulk;
+            float waist = 12.2f + bulk * 0.55f;
+            float hip = 14.5f + bulk * 0.6f;
+            if (t < 0.35f) return lerpf(16.0f + bulk * 0.6f, chest, std::sin((t / 0.35f) * PI * 0.5f));
+            if (t < 0.80f) return lerpf(chest, waist, (t - 0.35f) / 0.45f);
+            return lerpf(waist, hip, (t - 0.80f) / 0.20f);
+        },
+        [=](float t, float side, float) {
+            uint32_t col = packRgba(225, 225, 232);
+            // Pectoral underside contour + sternum & abdominal muscle creases
+            if (t > 0.24f && t < 0.32f && std::abs(side) < 0.68f) col = scaleColor(col, 0.72f);
+            if (t > 0.44f && t < 0.50f && std::abs(side) < 0.45f) col = scaleColor(col, 0.78f);
+            if (t > 0.58f && t < 0.64f && std::abs(side) < 0.42f) col = scaleColor(col, 0.78f);
+            if (std::abs(side) < 0.09f && t > 0.18f && t < 0.75f) col = scaleColor(col, 0.80f);
+            return col;
+        }
+    );
     return c;
 }
 
-Canvas buildChestPlateCanvas() {
-    Canvas c(64, 62);
-    // Armored V-harness / martial arts gi vest
-    c.drawShadedLimb(20, 14, 10, 31, 46, 8, 1.0f, packRgba(235, 235, 240));
-    c.drawShadedLimb(44, 14, 10, 33, 46, 8, 1.0f, packRgba(215, 215, 225));
-    // Central armor sternum plate
-    c.drawShadedLimb(32, 16, 13, 32, 42, 9, 1.5f, packRgba(245, 245, 250));
-    // Belt
-    c.drawRectOutlined(15, 48, 34, 10, packRgba(210, 210, 220));
+// Layered martial-arts gi / battle cuirass with V-collar folds & contoured sash (NO boxy rectangles!)
+Canvas buildChestPlateCanvas(int physique) {
+    Canvas c(68, 66);
+    float bulk = (physique == 1) ? 4.0f : (physique == 2 ? -2.0f : 0.0f);
+    // Left & right crossed lapels
+    c.drawShadedLimb(19.0f - bulk * 0.4f, 15.0f, 8.5f + bulk * 0.3f, 32.0f, 48.0f, 6.5f, 1.5f, packRgba(235, 235, 242));
+    c.drawShadedLimb(49.0f + bulk * 0.4f, 15.0f, 8.5f + bulk * 0.3f, 36.0f, 48.0f, 6.5f, 1.5f, packRgba(218, 218, 228));
+    // Sculpted center cuirass / chest plate
+    c.drawShadedEllipse(34.0f, 27.0f, 13.0f + bulk * 0.5f, 13.5f, packRgba(242, 242, 250));
+    // Contoured curved martial-arts belt sash
+    c.drawShadedLimb(17.0f - bulk * 0.3f, 52.0f, 5.2f, 51.0f + bulk * 0.3f, 52.0f, 5.2f, -2.5f, packRgba(210, 210, 222));
     return c;
 }
 
 Canvas buildWaistTabardCanvas() {
-    Canvas c(56, 50);
-    // Martial arts waistcloth / sash hanging down
-    c.drawShadedLimb(28, 8, 13, 28, 40, 17, 1.0f, packRgba(225, 225, 235));
-    c.drawRectOutlined(24, 10, 8, 28, packRgba(245, 245, 255));
+    Canvas c(58, 52);
+    // Draped battle tabard with central split fold & knotted sash tails
+    c.drawOrganic(
+        29, 7, 29, 44, 20.0f,
+        [](float t) { return lerpf(12.5f, 17.5f, t) + std::sin(t * PI) * 1.5f; },
+        [](float t, float side, float) {
+            uint32_t col = packRgba(225, 225, 236);
+            if (std::abs(side) < 0.16f && t > 0.25f) col = scaleColor(col, 0.72f);
+            if (std::abs(side) > 0.72f) col = scaleColor(col, 0.85f);
+            return col;
+        }
+    );
+    c.drawShadedLimb(29.0f, 8.0f, 4.5f, 22.0f, 32.0f, 3.2f, 1.2f, packRgba(248, 248, 255));
+    c.drawShadedLimb(29.0f, 8.0f, 4.5f, 36.0f, 34.0f, 3.2f, -1.2f, packRgba(248, 248, 255));
     return c;
 }
 
 Canvas buildThighCanvas() {
-    Canvas c(38, 54);
-    // Thick martial-arts hakama / muscular quad
-    c.drawShadedLimb(19, 12, 12.5f, 19, 44, 9.5f, 2.2f, packRgba(235, 235, 240));
+    Canvas c(40, 56);
+    // Flowing martial-arts thigh / hakama pants with natural quad curve & cloth folds
+    c.drawOrganic(
+        20, 10, 20, 46, 16.0f,
+        [](float t) {
+            float bulge = std::sin(t * PI) * 3.2f;
+            return lerpf(12.8f, 9.2f, t) + bulge;
+        },
+        [](float t, float side, float) {
+            uint32_t col = packRgba(232, 232, 240);
+            if (t > 0.3f && t < 0.8f && std::abs(side + 0.15f) < 0.14f) col = scaleColor(col, 0.76f);
+            return col;
+        }
+    );
     return c;
 }
 
 Canvas buildShinBootCanvas() {
-    Canvas c(42, 56);
-    // Shin guard + knee pad + heavy combat boot with forward toe
-    c.drawShadedLimb(18, 10, 10.0f, 18, 42, 7.5f, 1.8f, packRgba(230, 230, 235));
-    c.drawShadedEllipse(20, 10, 8.5f, 7.5f, packRgba(245, 245, 250)); // knee guard
-    c.drawShadedLimb(17, 42, 7.5f, 29, 45, 6.2f, 0.5f, packRgba(215, 215, 225)); // boot foot
-    c.drawRectOutlined(11, 47, 23, 5, packRgba(60, 55, 70)); // boot sole
+    Canvas c(44, 58);
+    // Gastrocnemius calf curve + knee pad + contoured armored boot & arched foot
+    c.drawOrganic(
+        18, 9, 18, 44, 13.0f,
+        [](float t) {
+            if (t < 0.35f) return lerpf(8.8f, 11.2f, t / 0.35f);
+            return lerpf(11.2f, 6.8f, (t - 0.35f) / 0.65f);
+        },
+        [](float t, float, float) {
+            uint32_t col = packRgba(228, 228, 236);
+            if (t > 0.45f && t < 0.53f) col = scaleColor(col, 0.74f); // shin armor strap
+            if (t > 0.72f && t < 0.80f) col = scaleColor(col, 0.74f);
+            return col;
+        }
+    );
+    c.drawShadedEllipse(20.0f, 10.0f, 8.2f, 7.2f, packRgba(245, 245, 252)); // contoured knee guard
+    // Arched boot & toe cap
+    c.drawShadedLimb(17.0f, 43.0f, 7.2f, 32.0f, 46.5f, 5.2f, 1.2f, packRgba(210, 210, 222));
+    c.drawShadedLimb(13.0f, 49.0f, 2.8f, 34.0f, 49.0f, 2.2f, 0.0f, packRgba(55, 50, 68));
     return c;
 }
 
 Canvas buildBicepCanvas() {
-    Canvas c(30, 42);
-    c.drawShadedLimb(15, 9, 8.8f, 15, 33, 6.8f, 2.0f, packRgba(235, 235, 240));
+    Canvas c(32, 44);
+    // Deltoid shoulder roundness -> bicep peak -> slim elbow joint
+    c.drawOrganic(
+        16, 8, 16, 35, 12.0f,
+        [](float t) {
+            float peak = std::sin(clampf(t * 1.15f, 0.0f, 1.0f) * PI) * 2.8f;
+            return lerpf(9.2f, 6.4f, t) + peak;
+        },
+        [](float, float, float) { return packRgba(235, 235, 242); }
+    );
     return c;
 }
 
 Canvas buildForearmCanvas() {
-    Canvas c(32, 42);
-    // Armored forearm bracer
-    c.drawShadedLimb(16, 9, 7.5f, 16, 33, 6.5f, 1.6f, packRgba(235, 235, 240));
-    c.drawRectOutlined(10, 16, 12, 14, packRgba(210, 210, 220));
+    Canvas c(34, 44);
+    // Forearm muscle swell -> wrapped armored bracer -> tapered wrist
+    c.drawOrganic(
+        17, 8, 17, 35, 11.0f,
+        [](float t) {
+            float swell = std::sin(clampf(t * 1.3f, 0.0f, 1.0f) * PI) * 2.2f;
+            return lerpf(7.8f, 5.6f, t) + swell;
+        },
+        [](float t, float, float) {
+            uint32_t col = packRgba(230, 230, 238);
+            if (t > 0.35f && t < 0.78f) col = scaleColor(col, 0.90f); // bracer armor band
+            if (t > 0.32f && t < 0.37f) col = scaleColor(col, 0.70f);
+            if (t > 0.76f && t < 0.81f) col = scaleColor(col, 0.70f);
+            return col;
+        }
+    );
     return c;
 }
 
 Canvas buildFistCanvas() {
-    Canvas c(24, 24);
-    c.drawShadedEllipse(12, 12, 8.5f, 7.5f, packRgba(240, 240, 245));
-    c.drawRectOutlined(12, 7, 6, 10, packRgba(215, 215, 225));
+    Canvas c(26, 26);
+    c.drawShadedEllipse(13, 13, 8.8f, 7.6f, packRgba(240, 240, 248));
+    c.drawShadedLimb(15.0f, 8.0f, 3.0f, 16.0f, 18.0f, 2.8f, 0.8f, packRgba(210, 210, 224));
     return c;
 }
 
 Canvas buildHeadBaseCanvas() {
-    Canvas c(48, 54);
-    // Neck + sculpted jaw/cranium (not a plain stickman ball!)
-    c.drawShadedLimb(23, 36, 7.5f, 23, 47, 8.0f, 0.0f, packRgba(220, 220, 225));
-    c.drawShadedEllipse(24, 22, 13.5f, 15.5f, packRgba(240, 240, 245));
-    // Jawline
-    c.drawShadedLimb(21, 25, 11.0f, 27, 34, 8.5f, 0.5f, packRgba(230, 230, 235));
+    Canvas c(50, 56);
+    // Anatomically sculpted neck, cranium, brow ridge, nose & strong jawline
+    c.drawShadedLimb(22.0f, 35.0f, 7.2f, 22.0f, 48.0f, 8.2f, 0.5f, packRgba(216, 216, 224));
+    c.drawShadedEllipse(24.0f, 21.5f, 13.0f, 14.5f, packRgba(238, 238, 245));
+    c.drawShadedLimb(20.0f, 24.0f, 10.5f, 29.0f, 33.5f, 7.2f, 1.0f, packRgba(228, 228, 236));
+    // Nose bridge & ear contour
+    c.drawShadedLimb(33.5f, 20.0f, 2.5f, 36.0f, 26.0f, 2.2f, 0.0f, packRgba(220, 220, 228), 1.0f);
     return c;
 }
 
 Canvas buildPauldronCanvas() {
-    Canvas c(38, 34);
-    c.drawShadedEllipse(19, 16, 14.5f, 11.0f, packRgba(240, 240, 245));
-    c.drawShadedLimb(14, 14, 6.0f, 28, 10, 3.0f, 0.0f, packRgba(255, 255, 255));
+    Canvas c(40, 36);
+    c.drawOrganic(
+        10, 20, 31, 14, 15.0f,
+        [](float t) { return lerpf(8.5f, 5.0f, t) + std::sin(t * PI) * 5.5f; },
+        [](float t, float side, float) {
+            uint32_t col = packRgba(242, 242, 250);
+            if (t > 0.45f && t < 0.55f) col = scaleColor(col, 0.72f);
+            if (side > 0.4f) col = scaleColor(col, 1.12f);
+            return col;
+        }
+    );
     return c;
 }
 
 Canvas buildCapeCanvas() {
-    Canvas c(62, 92);
-    c.drawShadedLimb(42, 10, 10.0f, 18, 80, 19.0f, 2.0f, packRgba(230, 230, 240));
+    Canvas c(64, 94);
+    c.drawOrganic(
+        42, 10, 18, 84, 22.0f,
+        [](float t) { return lerpf(9.0f, 19.5f, t) + std::sin(t * PI) * 2.5f; },
+        [](float, float side, float) {
+            uint32_t col = packRgba(228, 228, 238);
+            if (std::abs(side) < 0.2f) col = scaleColor(col, 0.80f);
+            return col;
+        }
+    );
     return c;
 }
 
 Canvas buildScarfCanvas() {
-    Canvas c(46, 32);
-    c.drawShadedLimb(38, 10, 5.5f, 8, 22, 3.5f, 1.5f, packRgba(245, 245, 250));
+    Canvas c(48, 34);
+    c.drawOrganic(
+        39, 10, 8, 24, 9.0f,
+        [](float t) { return lerpf(5.5f, 3.2f, t) + std::sin(t * PI * 1.5f) * 1.5f; },
+        [](float, float, float) { return packRgba(245, 245, 252); }
+    );
     return c;
 }
 
 Canvas buildHeadgearCanvas(HeadgearStyle style, uint32_t prim, uint32_t sec, uint32_t acc) {
     Canvas c(68, 66);
-    // Base center corresponds to headBase (34, 30)
     switch (style) {
         case HeadgearStyle::NINJA_COWL:
         case HeadgearStyle::CRYO_MASK:
-            c.drawShadedEllipse(34, 22, 14.5f, 11.0f, prim);
-            c.drawShadedLimb(26, 30, 10.5f, 40, 35, 8.5f, 0.5f, prim); // ninja face mask
-            c.drawRectOutlined(21, 18, 26, 4, acc); // headband
+            c.drawShadedEllipse(34, 21, 14.5f, 10.5f, prim);
+            c.drawShadedLimb(26, 30, 10.5f, 41, 35, 7.8f, 1.0f, prim);
+            c.drawShadedLimb(20, 18, 2.2f, 47, 17, 2.2f, 0.5f, acc, 1.0f);
             break;
         case HeadgearStyle::THUNDER_HAT:
             c.drawShadedEllipse(34, 24, 14.0f, 10.0f, sec);
-            c.drawShadedLimb(10, 18, 5.0f, 58, 18, 5.0f, 1.5f, acc); // wide conical brim
-            c.drawShadedLimb(24, 12, 8.0f, 44, 12, 8.0f, 2.0f, prim); // top cone
+            c.drawShadedLimb(10, 18, 4.5f, 58, 18, 4.5f, 2.0f, acc);
+            c.drawShadedLimb(22, 12, 7.5f, 46, 12, 7.5f, 2.5f, prim);
             break;
         case HeadgearStyle::WRAITH_HOOD:
         case HeadgearStyle::SKULL_HOOD:
             c.drawShadedEllipse(33, 26, 17.5f, 18.0f, sec);
             c.drawShadedEllipse(36, 28, 12.0f, 13.0f,
                                (style == HeadgearStyle::SKULL_HOOD) ? packRgba(225, 220, 235) : packRgba(18, 14, 26));
-            c.drawRectOutlined(22, 14, 24, 4, acc);
+            c.drawShadedLimb(22, 14, 2.2f, 45, 14, 2.2f, 1.0f, acc, 1.0f);
             break;
         case HeadgearStyle::TITAN_HORNS:
             c.drawShadedEllipse(34, 24, 15.0f, 12.0f, prim);
-            c.drawShadedLimb(24, 18, 5.0f, 13, 6, 2.0f, 0.5f, acc);
-            c.drawShadedLimb(42, 18, 5.0f, 54, 6, 2.0f, 0.5f, acc);
-            c.drawRectOutlined(25, 30, 18, 8, sec);
+            c.drawShadedLimb(24, 18, 5.2f, 12, 5, 1.8f, 1.2f, acc);
+            c.drawShadedLimb(42, 18, 5.2f, 55, 5, 1.8f, -1.2f, acc);
+            c.drawShadedLimb(27, 33, 7.0f, 41, 34, 5.5f, 0.5f, sec);
             break;
         case HeadgearStyle::RONIN_KABUTO:
             c.drawShadedEllipse(34, 22, 16.5f, 11.0f, prim);
             c.drawShadedLimb(17, 25, 6.0f, 24, 16, 5.0f, 0.0f, sec);
-            c.drawShadedLimb(38, 15, 3.5f, 48, 5, 2.0f, 0.0f, acc); // kabuto crest
-            c.drawShadedLimb(28, 32, 9.0f, 40, 35, 7.5f, 0.0f, sec); // menpo mask
+            c.drawShadedLimb(38, 15, 3.8f, 49, 4, 1.5f, 0.5f, acc);
+            c.drawShadedLimb(28, 32, 9.0f, 40, 35, 7.5f, 0.5f, sec);
             break;
         case HeadgearStyle::VIPER_CROWN:
         case HeadgearStyle::BLOOD_TIARA:
             c.drawShadedEllipse(34, 21, 14.5f, 11.0f, scaleColor(prim, 0.7f));
-            c.drawShadedLimb(28, 14, 4.5f, 38, 6, 2.5f, 0.0f, acc);
+            c.drawShadedLimb(28, 14, 4.5f, 38, 6, 2.2f, 0.5f, acc);
             c.drawShadedEllipse(40, 13, 5.0f, 5.0f, acc);
             break;
         case HeadgearStyle::CYBER_VISOR:
             c.drawShadedEllipse(34, 26, 15.5f, 16.5f, prim);
-            c.drawRectOutlined(32, 21, 16, 7, acc);
+            c.drawShadedLimb(31, 23, 3.5f, 47, 23, 3.0f, 0.5f, acc, 1.2f);
             c.drawShadedLimb(23, 33, 8.0f, 40, 36, 6.5f, 0.0f, sec);
             break;
         case HeadgearStyle::SOLAR_HELM:
             c.drawShadedEllipse(34, 25, 16.0f, 16.0f, prim);
-            c.drawShadedLimb(32, 15, 5.0f, 20, 4, 2.0f, 0.0f, acc);
-            c.drawShadedLimb(37, 15, 4.5f, 48, 5, 2.0f, 0.0f, acc);
-            c.drawRectOutlined(31, 21, 16, 6, acc);
+            c.drawShadedLimb(32, 15, 5.0f, 20, 4, 2.0f, 0.8f, acc);
+            c.drawShadedLimb(37, 15, 4.5f, 48, 5, 2.0f, -0.8f, acc);
+            c.drawShadedLimb(30, 23, 3.2f, 46, 23, 2.8f, 0.5f, acc, 1.2f);
             break;
         case HeadgearStyle::STARLIGHT_MASK:
             c.drawShadedEllipse(34, 23, 15.0f, 12.5f, sec);
-            c.drawShadedLimb(27, 31, 9.5f, 40, 35, 7.5f, 0.0f, prim);
+            c.drawShadedLimb(27, 31, 9.5f, 40, 35, 7.5f, 0.5f, prim);
             c.drawShadedEllipse(39, 13, 5.5f, 5.5f, acc);
             break;
     }
-    // Glowing warrior eye!
-    c.drawShadedEllipse(41, 24, 4.0f, 2.8f, acc, 1.0f);
+    // Fierce glowing warrior eye
+    c.drawShadedEllipse(41, 24, 4.2f, 2.6f, acc, 1.0f);
     return c;
 }
 
@@ -401,7 +511,7 @@ Canvas buildWeaponCanvas(WeaponStyle w) {
             break;
         case WeaponStyle::KATANA:
             c.drawShadedLimb(10, 24, 3.2f, 26, 23, 3.2f, 0.0f, packRgba(70, 65, 80));
-            c.drawRectOutlined(25, 16, 4, 14, packRgba(240, 205, 90));
+            c.drawShadedEllipse(27, 23, 3.0f, 7.0f, packRgba(240, 205, 90));
             c.drawBladeSegment(28, 22, 4.2f, 84, 12, 1.5f, packRgba(255, 255, 255), packRgba(210, 235, 245));
             break;
         case WeaponStyle::SOUL_SCYTHE:
@@ -410,7 +520,7 @@ Canvas buildWeaponCanvas(WeaponStyle w) {
             break;
         case WeaponStyle::SOLAR_BLADE:
             c.drawShadedLimb(10, 22, 3.5f, 26, 22, 3.5f, 0.0f, packRgba(180, 130, 40));
-            c.drawRectOutlined(24, 12, 5, 20, packRgba(255, 215, 80));
+            c.drawShadedEllipse(26, 22, 3.5f, 9.0f, packRgba(255, 215, 80));
             c.drawBladeSegment(28, 22, 6.5f, 84, 22, 2.0f, packRgba(255, 255, 235), packRgba(255, 225, 130));
             break;
         case WeaponStyle::CRESCENT_BLADES:
@@ -431,7 +541,6 @@ vita2d_texture* buildPortraitTex(int charId,
     const CharacterDef& ch = getCharacter(charId);
     Canvas p(112, 112);
 
-    // Rich dark radial elemental background glow + diagonal energy streaks
     for (int y = 0; y < 112; ++y) {
         for (int x = 0; x < 112; ++x) {
             float dx = (x - 56.0f) / 56.0f;
@@ -448,21 +557,19 @@ vita2d_texture* buildPortraitTex(int charId,
         }
     }
 
-    // Composite shaded upper-body bust at 1.5x crisp zoom
     Canvas bust(112, 112);
-    bust.compositeOver(torso, 24, 54, ch.secondaryColor);
-    bust.compositeOver(chest, 24, 54, ch.primaryColor);
+    bust.compositeOver(torso, 22, 52, ch.secondaryColor);
+    bust.compositeOver(chest, 22, 52, ch.primaryColor);
     if (ch.isCyber) {
         bust.drawShadedEllipse(56, 76, 5.5f, 5.5f, ch.accentColor, 1.2f);
     }
     if (ch.hasPauldrons) {
-        bust.compositeOver(pauldron, 14, 58, ch.accentColor);
-        bust.compositeOver(pauldron, 60, 58, ch.accentColor);
+        bust.compositeOver(pauldron, 12, 56, ch.accentColor);
+        bust.compositeOver(pauldron, 60, 56, ch.accentColor);
     }
-    bust.compositeOver(head, 32, 22, ch.skinColor);
-    bust.compositeOver(headgear, 22, 18, 0xFFFFFFFF);
+    bust.compositeOver(head, 31, 20, ch.skinColor);
+    bust.compositeOver(headgear, 22, 17, 0xFFFFFFFF);
 
-    // 1.35x centered upscale into portrait canvas for bold, readable face & armor
     for (int y = 0; y < 112; ++y) {
         for (int x = 0; x < 112; ++x) {
             int sx = static_cast<int>(56.0f + (x - 56.0f) / 1.38f);
@@ -481,7 +588,6 @@ vita2d_texture* buildPortraitTex(int charId,
 
 Canvas buildCometCanvas() {
     Canvas c(64, 40);
-    // Directional energy comet + glowing core (faces right, tinted by projectile color)
     c.drawShadedLimb(10, 20, 3.0f, 44, 20, 14.0f, 2.0f, packRgba(235, 235, 245), 1.5f);
     c.drawShadedLimb(16, 12, 2.0f, 40, 14, 6.0f, 0.0f, packRgba(255, 255, 255), 0.0f);
     c.drawShadedLimb(16, 28, 2.0f, 40, 26, 6.0f, 0.0f, packRgba(255, 255, 255), 0.0f);
@@ -517,8 +623,13 @@ Canvas buildPillarCanvas() {
 } // namespace
 
 bool FighterGfx::init() {
-    Canvas cTorso = buildTorsoCanvas();
-    Canvas cChest = buildChestPlateCanvas();
+    Canvas cTorso[3] = { buildTorsoCanvas(0), buildTorsoCanvas(1), buildTorsoCanvas(2) };
+    Canvas cChest[3] = { buildChestPlateCanvas(0), buildChestPlateCanvas(1), buildChestPlateCanvas(2) };
+    for (int p = 0; p < 3; ++p) {
+        torsoBase_[p] = uploadPair(cTorso[p]);
+        chestPlate_[p] = uploadPair(cChest[p]);
+    }
+
     Canvas cWaist = buildWaistTabardCanvas();
     Canvas cThigh = buildThighCanvas();
     Canvas cShin = buildShinBootCanvas();
@@ -530,8 +641,6 @@ bool FighterGfx::init() {
     Canvas cCape = buildCapeCanvas();
     Canvas cScarf = buildScarfCanvas();
 
-    torsoBase_ = uploadPair(cTorso);
-    chestPlate_ = uploadPair(cChest);
     waistTabard_ = uploadPair(cWaist);
     thigh_ = uploadPair(cThigh);
     shinBoot_ = uploadPair(cShin);
@@ -545,9 +654,10 @@ bool FighterGfx::init() {
 
     for (int i = 0; i < CHARACTER_COUNT; ++i) {
         const CharacterDef& ch = getCharacter(i);
+        int phys = getPhysiqueType(i);
         Canvas cHg = buildHeadgearCanvas(ch.headgear, ch.primaryColor, ch.secondaryColor, ch.accentColor);
         headgear_[i] = uploadPair(cHg);
-        bustPortraits_[i] = buildPortraitTex(i, cTorso, cChest, cHead, cPauldron, cHg);
+        bustPortraits_[i] = buildPortraitTex(i, cTorso[phys], cChest[phys], cHead, cPauldron, cHg);
     }
 
     for (int w = 1; w < 7; ++w) {
@@ -567,8 +677,10 @@ void FighterGfx::shutdown() {
     if (projScythe_) { vita2d_free_texture(projScythe_); projScythe_ = nullptr; }
     if (projShuriken_) { vita2d_free_texture(projShuriken_); projShuriken_ = nullptr; }
     if (projPillar_) { vita2d_free_texture(projPillar_); projPillar_ = nullptr; }
-    freePair(torsoBase_);
-    freePair(chestPlate_);
+    for (int p = 0; p < 3; ++p) {
+        freePair(torsoBase_[p]);
+        freePair(chestPlate_[p]);
+    }
     freePair(waistTabard_);
     freePair(thigh_);
     freePair(shinBoot_);
@@ -886,6 +998,7 @@ FighterPose FighterGfx::computePose(const Fighter& f, int globalFrame) const {
 
 void FighterGfx::drawFighter(const Fighter& f, float baseX, float baseY, int globalFrame, bool isGhost, uint8_t ghostAlpha) const {
     const CharacterDef& ch = getCharacter(f.charId);
+    int phys = getPhysiqueType(f.charId);
     float dir = static_cast<float>(f.facing);
 
     bool hurtFlash = (!isGhost && f.flashFrames > 0 && (f.flashFrames % 2 == 0));
@@ -903,7 +1016,6 @@ void FighterGfx::drawFighter(const Fighter& f, float baseX, float baseY, int glo
         cHg = cPrim;
     }
 
-    // Ground shadow aligned under fighter's feet
     if (!isGhost) {
         float heightAbove = std::max(0.0f, GROUND_Y - f.y);
         float shadowR = clampf(38.0f * (1.0f - heightAbove / 230.0f), 14.0f, 38.0f);
@@ -934,43 +1046,40 @@ void FighterGfx::drawFighter(const Fighter& f, float baseX, float baseY, int glo
 
     float torsoWorldAng = pose.torsoAngle + totalRoll;
 
-    // 1. Cape (behind body)
     if (ch.hasCape) {
         float capeX, capeY;
         rotPt(-8.0f, -34.0f, capeX, capeY);
         drawPart(cape_, capeX, capeY, torsoWorldAng + pose.capeAngle, 42.0f, 10.0f, scaleColor(cPrim, 0.85f));
     }
 
-    // 2. Back Arm
     float bShX, bShY;
     rotPt(-8.0f, -34.0f, bShX, bShY);
     float bArmAng = torsoWorldAng + pose.bShoulderAngle;
-    drawPart(bicep_, bShX, bShY, bArmAng, 15.0f, 9.0f, scaleColor(cSkin, 0.85f));
+    drawPart(bicep_, bShX, bShY, bArmAng, 16.0f, 8.0f, scaleColor(cSkin, 0.85f));
 
     float bElbX = bShX - std::sin(bArmAng * dir) * 24.0f;
     float bElbY = bShY + std::cos(bArmAng * dir) * 24.0f;
     float bForeAng = bArmAng + pose.bElbowAngle;
-    drawPart(forearmGauntlet_, bElbX, bElbY, bForeAng, 16.0f, 9.0f, scaleColor(cPrim, 0.85f));
+    drawPart(forearmGauntlet_, bElbX, bElbY, bForeAng, 17.0f, 8.0f, scaleColor(cPrim, 0.85f));
 
     float bHandX = bElbX - std::sin(bForeAng * dir) * 23.0f;
     float bHandY = bElbY + std::cos(bForeAng * dir) * 23.0f;
-    drawPart(fist_, bHandX, bHandY, bForeAng, 12.0f, 12.0f, scaleColor(cAcc, 0.88f));
+    drawPart(fist_, bHandX, bHandY, bForeAng, 13.0f, 13.0f, scaleColor(cAcc, 0.88f));
 
-    // 3. Back Leg
     float bHipX, bHipY;
     rotPt(-5.0f, 2.0f, bHipX, bHipY);
     float bLegAng = totalRoll + pose.bHipAngle;
-    drawPart(thigh_, bHipX, bHipY, bLegAng, 19.0f, 12.0f, scaleColor(cSec, 0.86f));
+    drawPart(thigh_, bHipX, bHipY, bLegAng, 20.0f, 10.0f, scaleColor(cSec, 0.86f));
 
     float bKneeX = bHipX - std::sin(bLegAng * dir) * 30.0f;
     float bKneeY = bHipY + std::cos(bLegAng * dir) * 30.0f;
     float bShinAng = bLegAng + pose.bKneeAngle;
-    drawPart(shinBoot_, bKneeX, bKneeY, bShinAng, 18.0f, 10.0f, scaleColor(cPrim, 0.86f));
+    drawPart(shinBoot_, bKneeX, bKneeY, bShinAng, 18.0f, 9.0f, scaleColor(cPrim, 0.86f));
 
-    // 4. Torso, Chest Armor, Cyber Core & Waist Tabard
-    drawPart(torsoBase_, hipX, hipY, torsoWorldAng, 32.0f, 56.0f, cSec);
-    drawPart(chestPlate_, hipX, hipY, torsoWorldAng, 32.0f, 56.0f, cPrim);
-    drawPart(waistTabard_, hipX, hipY, totalRoll + pose.torsoAngle * 0.4f, 28.0f, 8.0f, cAcc);
+    // Organic Torso, Armor & Tabard
+    drawPart(torsoBase_[phys], hipX, hipY, torsoWorldAng, 34.0f, 58.0f, cSec);
+    drawPart(chestPlate_[phys], hipX, hipY, torsoWorldAng, 34.0f, 56.0f, cPrim);
+    drawPart(waistTabard_, hipX, hipY, totalRoll + pose.torsoAngle * 0.4f, 29.0f, 7.0f, cAcc);
 
     if (ch.isCyber && !isGhost) {
         float coreX, coreY;
@@ -978,40 +1087,37 @@ void FighterGfx::drawFighter(const Fighter& f, float baseX, float baseY, int glo
         vita2d_draw_fill_circle(coreX, coreY, 6.5f, cAcc);
     }
 
-    // 5. Front Leg
     float fHipX, fHipY;
     rotPt(5.0f, 2.0f, fHipX, fHipY);
     float fLegAng = totalRoll + pose.fHipAngle;
-    drawPart(thigh_, fHipX, fHipY, fLegAng, 19.0f, 12.0f, cSec);
+    drawPart(thigh_, fHipX, fHipY, fLegAng, 20.0f, 10.0f, cSec);
 
     float fKneeX = fHipX - std::sin(fLegAng * dir) * 30.0f;
     float fKneeY = fHipY + std::cos(fLegAng * dir) * 30.0f;
     float fShinAng = fLegAng + pose.fKneeAngle;
-    drawPart(shinBoot_, fKneeX, fKneeY, fShinAng, 18.0f, 10.0f, cPrim);
+    drawPart(shinBoot_, fKneeX, fKneeY, fShinAng, 18.0f, 9.0f, cPrim);
 
-    // 6. Head, Scarf & Character Headgear
     float neckX, neckY;
     rotPt(2.0f, -40.0f, neckX, neckY);
     float headWorldAng = torsoWorldAng + pose.headAngle;
     if (ch.hasScarf) {
-        drawPart(scarf_, neckX, neckY - 8.0f, headWorldAng + pose.capeAngle * 0.6f, 38.0f, 10.0f, cAcc);
+        drawPart(scarf_, neckX, neckY - 8.0f, headWorldAng + pose.capeAngle * 0.6f, 39.0f, 10.0f, cAcc);
     }
-    drawPart(headBase_, neckX, neckY, headWorldAng, 23.0f, 44.0f, cSkin);
+    drawPart(headBase_, neckX, neckY, headWorldAng, 22.0f, 45.0f, cSkin);
     drawPart(headgear_[f.charId], neckX, neckY, headWorldAng, 33.0f, 48.0f, cHg);
 
-    // 7. Front Arm, Pauldron & Weapon
     float fShX, fShY;
     rotPt(6.0f, -34.0f, fShX, fShY);
     if (ch.hasPauldrons) {
         drawPart(pauldron_, fShX, fShY - 2.0f, torsoWorldAng, 19.0f, 16.0f, cAcc);
     }
     float fArmAng = torsoWorldAng + pose.fShoulderAngle;
-    drawPart(bicep_, fShX, fShY, fArmAng, 15.0f, 9.0f, cSkin);
+    drawPart(bicep_, fShX, fShY, fArmAng, 16.0f, 8.0f, cSkin);
 
     float fElbX = fShX - std::sin(fArmAng * dir) * 24.0f;
     float fElbY = fShY + std::cos(fArmAng * dir) * 24.0f;
     float fForeAng = fArmAng + pose.fElbowAngle;
-    drawPart(forearmGauntlet_, fElbX, fElbY, fForeAng, 16.0f, 9.0f, cPrim);
+    drawPart(forearmGauntlet_, fElbX, fElbY, fForeAng, 17.0f, 8.0f, cPrim);
 
     float fHandX = fElbX - std::sin(fForeAng * dir) * 23.0f;
     float fHandY = fElbY + std::cos(fForeAng * dir) * 23.0f;
@@ -1020,11 +1126,10 @@ void FighterGfx::drawFighter(const Fighter& f, float baseX, float baseY, int glo
         drawPart(weapon_[static_cast<int>(ch.weapon)], fHandX, fHandY,
                  fForeAng + pose.weaponAngle, 14.0f, 21.0f, 0xFFFFFFFF);
     }
-    drawPart(fist_, fHandX, fHandY, fForeAng, 12.0f, 12.0f, cAcc);
+    drawPart(fist_, fHandX, fHandY, fForeAng, 13.0f, 13.0f, cAcc);
 
     if (isGhost) return;
 
-    // 8. High-Quality Attack Slash Arc & Special Fist Aura
     if (f.state == FighterState::ATTACK) {
         const MoveData& mv = f.currentMove;
         if (f.stateFrame >= mv.startup && f.stateFrame <= mv.startup + mv.active + 2) {
@@ -1035,7 +1140,6 @@ void FighterGfx::drawFighter(const Fighter& f, float baseX, float baseY, int glo
             float ax = isKick ? fFootX : fHandX;
             float ay = isKick ? fFootY : fHandY;
 
-            // Multi-segment curved energy slash ribbon
             for (int seg = 0; seg < 4; ++seg) {
                 float a0 = -1.1f + seg * 0.55f;
                 float a1 = a0 + 0.55f;
@@ -1057,7 +1161,6 @@ void FighterGfx::drawFighter(const Fighter& f, float baseX, float baseY, int glo
         }
     }
 
-    // Status burn / poison / Super Ready visual aura
     if (f.burnFrames > 0) {
         for (int b = 0; b < 3; ++b) {
             float bx = baseX + std::sin(globalFrame * 0.3f + b * 2.1f) * 18.0f;
@@ -1077,7 +1180,6 @@ void FighterGfx::drawFighter(const Fighter& f, float baseX, float baseY, int glo
         vita2d_draw_fill_circle(fHandX, fHandY, auraR, (ch.accentColor & 0x00FFFFFFu) | (140u << 24));
     }
 
-    // 9. Block Shield & Frozen Crystal Overlay
     if (f.state == FighterState::BLOCK_HIGH || f.state == FighterState::BLOCK_LOW) {
         float shieldY = (f.state == FighterState::BLOCK_LOW) ? baseY - 48.0f : baseY - 84.0f;
         vita2d_draw_rectangle(baseX + dir * 24.0f - 4.0f, shieldY - 36.0f, 8.0f, 72.0f, rgba(110, 215, 255, 195));

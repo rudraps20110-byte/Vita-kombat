@@ -45,8 +45,8 @@ public:
     void drawProjectile(const Projectile& pr, float x, float y, int globalFrame) const;
 
 private:
-    TexPair torsoBase_;
-    TexPair chestPlate_;
+    TexPair torsoBase_[3];
+    TexPair chestPlate_[3];
     TexPair waistTabard_;
     TexPair thigh_;
     TexPair shinBoot_;

@@ -27,6 +27,7 @@ add_executable(${PROJECT_NAME}
     src/audio.cpp
     src/combat.cpp
     src/fighter_gfx.cpp
+    src/story.cpp
     src/renderer.cpp
 )
 
@@ -66,5 +67,9 @@ vita_create_vpk(${PROJECT_NAME}.vpk ${VITA_TITLEID} ${PROJECT_NAME}.self
     FILE ${CMAKE_CURRENT_SOURCE_DIR}/assets/stages/stage_dojo.png assets/stages/stage_dojo.png
     FILE ${CMAKE_CURRENT_SOURCE_DIR}/assets/stages/stage_cyber.png assets/stages/stage_cyber.png
     FILE ${CMAKE_CURRENT_SOURCE_DIR}/assets/stages/stage_solar.png assets/stages/stage_solar.png
+    FILE ${CMAKE_CURRENT_SOURCE_DIR}/assets/story/art_0.png assets/story/art_0.png
+    FILE ${CMAKE_CURRENT_SOURCE_DIR}/assets/story/art_1.png assets/story/art_1.png
+    FILE ${CMAKE_CURRENT_SOURCE_DIR}/assets/story/art_2.png assets/story/art_2.png
+    FILE ${CMAKE_CURRENT_SOURCE_DIR}/assets/story/art_3.png assets/story/art_3.png
 )
 
